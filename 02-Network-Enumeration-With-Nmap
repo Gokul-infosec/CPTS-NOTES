@@ -33,7 +33,7 @@
 
 ### 🧠 Remember
 
-```text
+
 🟢 -sn = Discover hosts
 🟢 -Pn = Assume host is up
 ```
@@ -54,7 +54,7 @@
 
 ### SYN Scan Logic
 
-```text
+
 🔵 SYN
    │
    ├── SYN/ACK → 🟢 OPEN
@@ -222,7 +222,7 @@ nc -nv 10.10.10.10 22
 
 Possible response:
 
-```text
+
 SSH-2.0-OpenSSH_8.2p1 Ubuntu
 ```
 
@@ -269,7 +269,7 @@ Includes:
 
 ### 🧠 Remember
 
-```text
+
 -A
 │
 ├── -sV → 🟢 Version detection
@@ -336,7 +336,7 @@ sudo nmap -sA -p443 <TARGET>
 
 Helps determine:
 
-```text
+
 🔴 FILTERED
       vs
 🟢 UNFILTERED
@@ -430,7 +430,7 @@ Useful when working through an HTB VPN interface.
 
 ### Quick Logic
 
-```text
+
 🟢 OPEN
    ↓
 Service responds
@@ -454,7 +454,7 @@ sudo nmap --reason <TARGET>
 
 Example:
 
-```text
+
 PORT   STATE     SERVICE  REASON
 22/tcp open      ssh      syn-ack
 80/tcp open      http     syn-ack
@@ -483,7 +483,6 @@ Shows packets sent and received.
 
 Useful for understanding:
 
-```text
 SYN
 SYN/ACK
 RST
@@ -582,13 +581,13 @@ nmap -iL hosts.txt
 
 ## Example — Open
 
-```text
+
 22/tcp open ssh OpenSSH 8.2p1 Ubuntu
 ```
 
 Think:
 
-```text
+
 🟢 OPEN
    ↓
 SSH is listening
@@ -602,13 +601,13 @@ Enumerate SSH
 
 ## Example — Closed
 
-```text
+
 21/tcp closed ftp
 ```
 
 Think:
 
-```text
+
 ⚫ CLOSED
    ↓
 Host is reachable
@@ -620,7 +619,7 @@ No FTP service listening
 
 ## Example — Filtered
 
-```text
+
 443/tcp filtered https
 ```
 
@@ -638,13 +637,13 @@ Investigate
 
 ## Example — UDP
 
-```text
+
 53/udp open|filtered domain
 ```
 
 Think:
 
-```text
+
 🟡 OPEN|FILTERED
        ↓
 UDP response insufficient
@@ -656,7 +655,7 @@ Use -sV / NSE
 
 ## Example — Hidden Service
 
-```text
+
 50000/tcp filtered
 ```
 
@@ -678,7 +677,7 @@ Re-enumerate
 
 # 🔥 21. CPTS Nmap Methodology
 
-```text
+
                   🎯 TARGET
                      │
                      ▼
@@ -831,9 +830,8 @@ sudo nmap -oA scan <TARGET>
 
 ---
 
-# 🏆 CPTS Mindset
+# remember 
 
-```text
 HOST
  ↓
 PORTS
@@ -848,5 +846,3 @@ VULNERABILITIES
  ↓
 EXPLOITATION
 ```
-
-> **Nmap isn't just a port scanner. It is the first major step in building your attack surface.**
