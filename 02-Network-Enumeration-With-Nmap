@@ -1,106 +1,106 @@
 02-Network-Enumeration-With-Nmap/
 
 
-# Nmap — CPTS Cheat Sheet
+# 🟦 Nmap — CPTS Cheat Sheet
 
-> Practical Nmap notes for penetration testing, network enumeration, and HTB/CPTS labs.
-
----
-
-## 1. Basic Nmap
-
-| Command                  | Explanation                              |
-| ------------------------ | ---------------------------------------- |
-| `nmap <TARGET>`          | Basic scan of common TCP ports           |
-| `sudo nmap <TARGET>`     | Run Nmap with root privileges            |
-| `nmap -v <TARGET>`       | Verbose output                           |
-| `nmap -vv <TARGET>`      | Very verbose output                      |
-| `nmap -n <TARGET>`       | Disable DNS resolution                   |
-| `nmap -Pn <TARGET>`      | Skip host discovery; assume target is up |
-| `nmap --reason <TARGET>` | Show why Nmap determined the port state  |
+> 🟢 **Enumeration** · 🔵 **Scanning** · 🟡 **Analysis** · 🔴 **Evasion** · 🟣 **NSE** · ⚫ **Output**
 
 ---
 
-## 2. Host Discovery
+# 🔵 1. Basic Nmap
 
-| Command                        | Explanation                       |
-| ------------------------------ | --------------------------------- |
-| `sudo nmap -sn <TARGET>`       | Host discovery only; no port scan |
-| `sudo nmap -PE <TARGET>`       | ICMP Echo host discovery          |
-| `sudo nmap -Pn <TARGET>`       | Skip host discovery               |
-| `sudo nmap -sn 192.168.1.0/24` | Discover live hosts in a subnet   |
-| `sudo nmap -iL hosts.txt`      | Scan targets from a file          |
+| Command                  | Explanation                   |
+| ------------------------ | ----------------------------- |
+| `nmap <TARGET>`          | 🔵 Basic TCP scan             |
+| `sudo nmap <TARGET>`     | 🔵 Run with root privileges   |
+| `nmap -v <TARGET>`       | 🟡 Verbose output             |
+| `nmap -vv <TARGET>`      | 🟡 Very verbose output        |
+| `nmap -n <TARGET>`       | 🟡 Disable DNS resolution     |
+| `nmap -Pn <TARGET>`      | 🔵 Skip host discovery        |
+| `nmap --reason <TARGET>` | 🟡 Show reason for port state |
 
-### Remember
+---
+
+# 🟢 2. Host Discovery
+
+| Command                        | Explanation                 |
+| ------------------------------ | --------------------------- |
+| `sudo nmap -sn <TARGET>`       | 🟢 Discover live hosts only |
+| `sudo nmap -PE <TARGET>`       | 🟢 ICMP Echo discovery      |
+| `sudo nmap -Pn <TARGET>`       | 🟢 Assume target is online  |
+| `sudo nmap -sn 192.168.1.0/24` | 🟢 Discover hosts in subnet |
+| `sudo nmap -iL hosts.txt`      | 🟢 Scan targets from file   |
+
+### 🧠 Remember
 
 ```text
--sn = Discover hosts
--Pn = Assume host is up
+🟢 -sn = Discover hosts
+🟢 -Pn = Assume host is up
 ```
 
 ---
 
-## 3. TCP Port Scanning
+# 🔵 3. TCP Port Scanning
 
-| Command                              | Explanation               |
-| ------------------------------------ | ------------------------- |
-| `sudo nmap -sS <TARGET>`             | TCP SYN scan              |
-| `sudo nmap -sT <TARGET>`             | TCP Connect scan          |
-| `sudo nmap -p 80 <TARGET>`           | Scan port 80              |
-| `sudo nmap -p 22,80,443 <TARGET>`    | Scan selected ports       |
-| `sudo nmap -p 1-1000 <TARGET>`       | Scan ports 1–1000         |
-| `sudo nmap -p- <TARGET>`             | Scan all 65,535 TCP ports |
-| `sudo nmap --top-ports 100 <TARGET>` | Scan top 100 common ports |
+| Command                              | Explanation                  |
+| ------------------------------------ | ---------------------------- |
+| `sudo nmap -sS <TARGET>`             | 🔵 TCP SYN scan              |
+| `sudo nmap -sT <TARGET>`             | 🔵 TCP Connect scan          |
+| `sudo nmap -p 80 <TARGET>`           | 🔵 Scan port 80              |
+| `sudo nmap -p 22,80,443 <TARGET>`    | 🔵 Scan selected ports       |
+| `sudo nmap -p 1-1000 <TARGET>`       | 🔵 Scan ports 1–1000         |
+| `sudo nmap -p- <TARGET>`             | 🔵 Scan all 65,535 TCP ports |
+| `sudo nmap --top-ports 100 <TARGET>` | 🔵 Scan top 100 ports        |
 
 ### SYN Scan Logic
 
 ```text
-SYN
- │
- ├── SYN/ACK → OPEN
- │
- ├── RST     → CLOSED
- │
- └── No response → FILTERED
+🔵 SYN
+   │
+   ├── SYN/ACK → 🟢 OPEN
+   │
+   ├── RST     → ⚫ CLOSED
+   │
+   └── No response → 🔴 FILTERED
 ```
 
 ---
 
-## 4. UDP Scanning
+# 🔵 4. UDP Scanning
 
-| Command                               | Explanation             |
-| ------------------------------------- | ----------------------- |
-| `sudo nmap -sU <TARGET>`              | UDP scan                |
-| `sudo nmap -sU -p53 <TARGET>`         | Scan UDP port 53        |
-| `sudo nmap -sU -p53,161,500 <TARGET>` | Scan selected UDP ports |
-| `sudo nmap -sU -p- <TARGET>`          | Scan all UDP ports      |
+| Command                               | Explanation                |
+| ------------------------------------- | -------------------------- |
+| `sudo nmap -sU <TARGET>`              | 🔵 UDP scan                |
+| `sudo nmap -sU -p53 <TARGET>`         | 🔵 Scan UDP 53             |
+| `sudo nmap -sU -p53,161,500 <TARGET>` | 🔵 Scan selected UDP ports |
+| `sudo nmap -sU -p- <TARGET>`          | 🔵 Scan all UDP ports      |
 
 ### Common UDP Ports
 
-```text
-53    DNS
-67/68 DHCP
-69    TFTP
-123   NTP
-161   SNMP
-500   ISAKMP
-```
+|    Port | Service |
+| ------: | ------- |
+|    `53` | DNS     |
+| `67/68` | DHCP    |
+|    `69` | TFTP    |
+|   `123` | NTP     |
+|   `161` | SNMP    |
+|   `500` | ISAKMP  |
 
-> UDP scanning is generally much slower than TCP scanning.
+> 🟡 UDP scanning is generally much slower than TCP scanning.
 
 ---
 
-## 5. Service & Version Detection
+# 🟢 5. Service & Version Detection
 
-| Command                                    | Explanation                             |
-| ------------------------------------------ | --------------------------------------- |
-| `sudo nmap -sV <TARGET>`                   | Detect services and versions            |
-| `sudo nmap -sV -p80 <TARGET>`              | Version detection on port 80            |
-| `sudo nmap -sC -sV <TARGET>`               | Default NSE scripts + version detection |
-| `sudo nmap --version-intensity 5 <TARGET>` | Set version detection intensity         |
-| `sudo nmap -A <TARGET>`                    | Aggressive scan                         |
+| Command                                    | Explanation                            |
+| ------------------------------------------ | -------------------------------------- |
+| `sudo nmap -sV <TARGET>`                   | 🟢 Detect services and versions        |
+| `sudo nmap -sV -p80 <TARGET>`              | 🟢 Version detection on port 80        |
+| `sudo nmap -sC -sV <TARGET>`               | 🟢 Default NSE + version detection     |
+| `sudo nmap --version-intensity 5 <TARGET>` | 🟡 Control version detection intensity |
+| `sudo nmap -A <TARGET>`                    | 🟢 Aggressive enumeration              |
 
-### Standard Enumeration
+### ⭐ Standard Enumeration
 
 ```bash
 sudo nmap -sC -sV -p<OPEN_PORTS> <TARGET>
@@ -114,9 +114,9 @@ sudo nmap -sC -sV -p22,80,443 10.10.10.10
 
 ---
 
-## 6. NSE — Nmap Scripting Engine
+# 🟣 6. NSE — Nmap Scripting Engine
 
-NSE allows Nmap to perform additional enumeration and security checks using scripts.
+> NSE extends Nmap with scripts for enumeration, discovery, authentication, vulnerability detection, and more.
 
 ### Basic NSE
 
@@ -124,31 +124,31 @@ NSE allows Nmap to perform additional enumeration and security checks using scri
 nmap -sC <TARGET>
 ```
 
-Run default NSE scripts.
+🟣 Run default NSE scripts.
 
 ```bash
 nmap --script <SCRIPT> <TARGET>
 ```
 
-Run a specific script.
+🟣 Run a specific script.
 
 ```bash
 nmap --script <SCRIPT1>,<SCRIPT2> <TARGET>
 ```
 
-Run multiple scripts.
+🟣 Run multiple scripts.
 
 ### Useful Categories
 
-| Category    | Purpose                           |
-| ----------- | --------------------------------- |
-| `default`   | Standard enumeration              |
-| `discovery` | Discover additional information   |
-| `safe`      | Generally safe checks             |
-| `version`   | Service/version-related detection |
-| `auth`      | Authentication-related checks     |
-| `brute`     | Brute-force scripts               |
-| `vuln`      | Vulnerability checks              |
+| Category    | Purpose                   |
+| ----------- | ------------------------- |
+| `default`   | 🟢 Standard enumeration   |
+| `discovery` | 🟢 Information discovery  |
+| `safe`      | 🟢 Generally safe checks  |
+| `version`   | 🟢 Version-related checks |
+| `auth`      | 🟡 Authentication checks  |
+| `brute`     | 🟡 Brute-force scripts    |
+| `vuln`      | 🔴 Vulnerability checks   |
 
 Example:
 
@@ -156,63 +156,63 @@ Example:
 sudo nmap --script vuln -p<PORTS> <TARGET>
 ```
 
-> `dos`, `exploit`, `fuzzer`, and `intrusive` scripts may be disruptive.
+> ⚠️ `dos`, `exploit`, `fuzzer`, and `intrusive` scripts may be disruptive.
 
 ---
 
-## 7. HTTP Enumeration
+# 🟣 7. HTTP Enumeration
 
 ```bash
 sudo nmap -Pn -p80 --script http-enum <TARGET>
 ```
 
-Enumerate common web resources.
+🟣 Enumerate common web resources.
 
 ```bash
 sudo nmap -Pn -p80 --script http-title <TARGET>
 ```
 
-Retrieve the HTTP page title.
+🟣 Retrieve webpage title.
 
 ```bash
 sudo nmap -Pn -p80 --script http-headers <TARGET>
 ```
 
-Retrieve HTTP headers.
+🟣 Retrieve HTTP headers.
 
 ```bash
 sudo nmap -Pn -p80 --script "http-*" <TARGET>
 ```
 
-Run HTTP-related NSE scripts.
+🟣 Run HTTP-related NSE scripts.
 
 ---
 
-## 8. Banner Grabbing
+# 🟢 8. Banner Grabbing
 
 ```bash
 nmap -sV <TARGET>
 ```
 
-Attempt service/version detection.
+🟢 Attempt service/version detection.
 
 ```bash
 nmap --script banner <TARGET>
 ```
 
-Use the banner NSE script.
+🟢 Run banner NSE script.
 
 ```bash
 nc -nv <TARGET> <PORT>
 ```
 
-Manually connect to a service.
+🟢 Manually connect to a service.
 
 ```bash
 ncat -nv <TARGET> <PORT>
 ```
 
-Ncat equivalent.
+🟢 Ncat equivalent.
 
 Example:
 
@@ -220,7 +220,7 @@ Example:
 nc -nv 10.10.10.10 22
 ```
 
-Possible result:
+Possible response:
 
 ```text
 SSH-2.0-OpenSSH_8.2p1 Ubuntu
@@ -228,37 +228,37 @@ SSH-2.0-OpenSSH_8.2p1 Ubuntu
 
 ---
 
-## 9. OS Detection
+# 🟡 9. OS Detection
 
 ```bash
 sudo nmap -O <TARGET>
 ```
 
-Attempt operating-system detection.
+🟡 Attempt OS detection.
 
 ```bash
 sudo nmap -O -Pn <TARGET>
 ```
 
-OS detection while skipping host discovery.
+🟡 OS detection while skipping host discovery.
 
 ```bash
 sudo nmap -A <TARGET>
 ```
 
-Aggressive scan including OS detection.
+🟡 Aggressive scan including OS detection.
 
-> OS detection can be ambiguous. Confirm with service banners when possible.
+> ⚠️ OS detection is an estimate. Confirm with service banners and other evidence.
 
 ---
 
-## 10. Aggressive Scan
+# 🟢 10. Aggressive Scan
 
 ```bash
 sudo nmap -A <TARGET>
 ```
 
-`-A` enables:
+Includes:
 
 ```text
 -sV
@@ -267,22 +267,31 @@ sudo nmap -A <TARGET>
 --traceroute
 ```
 
-Useful when you want several enumeration capabilities in one scan.
+### 🧠 Remember
+
+```text
+-A
+│
+├── -sV → 🟢 Version detection
+├── -O  → 🟡 OS detection
+├── -sC → 🟣 Default NSE
+└── --traceroute
+```
 
 ---
 
-## 11. Timing
+# 🟡 11. Timing
 
-| Option | Timing     |
-| ------ | ---------- |
-| `-T0`  | Paranoid   |
-| `-T1`  | Sneaky     |
-| `-T2`  | Polite     |
-| `-T3`  | Normal     |
-| `-T4`  | Aggressive |
-| `-T5`  | Insane     |
+| Option | Timing        | Use               |
+| ------ | ------------- | ----------------- |
+| `-T0`  | 🔴 Paranoid   | Extremely slow    |
+| `-T1`  | 🟠 Sneaky     | Slow              |
+| `-T2`  | 🟡 Polite     | Slow              |
+| `-T3`  | 🟢 Normal     | Default           |
+| `-T4`  | 🔵 Aggressive | Common HTB choice |
+| `-T5`  | 🔴 Insane     | Very aggressive   |
 
-### Common HTB Choice
+### Common HTB Scan
 
 ```bash
 sudo nmap -sS -p- -T4 <TARGET>
@@ -296,16 +305,16 @@ sudo nmap -sS -p- -T4 --min-rate 1000 <TARGET>
 
 ---
 
-## 12. Performance Options
+# 🟡 12. Performance Options
 
-| Option                        | Explanation                              |
-| ----------------------------- | ---------------------------------------- |
-| `--min-rate 300`              | Try to maintain at least 300 packets/sec |
-| `--max-retries 0`             | Disable retransmissions                  |
-| `--max-retries 2`             | Limit retransmissions                    |
-| `--initial-rtt-timeout 100ms` | Initial RTT timeout                      |
-| `--max-rtt-timeout 1s`        | Maximum RTT timeout                      |
-| `--stats-every=5s`            | Show progress every 5 seconds            |
+| Option                        | Explanation                         |
+| ----------------------------- | ----------------------------------- |
+| `--min-rate 300`              | 🔵 Try to maintain 300 packets/sec  |
+| `--max-retries 0`             | 🔴 Disable retransmissions          |
+| `--max-retries 2`             | 🟡 Limit retransmissions            |
+| `--initial-rtt-timeout 100ms` | 🟡 Initial RTT timeout              |
+| `--max-rtt-timeout 1s`        | 🟡 Maximum RTT timeout              |
+| `--stats-every=5s`            | 🟢 Display progress every 5 seconds |
 
 Example:
 
@@ -315,133 +324,162 @@ sudo nmap -p- -T4 --min-rate 1000 --stats-every=5s <TARGET>
 
 ---
 
-## 13. Firewall / IDS / IPS Evasion
+# 🔴 13. Firewall / IDS / IPS Evasion
 
-### ACK Scan
+> ⚠️ Use these techniques only against systems you are authorized to test, such as HTB/THM labs or an approved assessment.
+
+## ACK Scan
 
 ```bash
 sudo nmap -sA -p443 <TARGET>
 ```
 
-Primarily determines:
+Helps determine:
 
 ```text
-FILTERED
-    vs
-UNFILTERED
+🔴 FILTERED
+      vs
+🟢 UNFILTERED
 ```
 
-It does not directly determine whether a port is open.
+> `-sA` does **not** directly determine whether a port is open.
 
 ---
 
-### Source Port Manipulation
+## Source Port Manipulation
 
 ```bash
 sudo nmap -sS -p443 --source-port 53 <TARGET>
 ```
 
-Use source port `53`.
+🔴 Forces source port `53`.
 
-Useful against poorly configured firewall rules that trust traffic originating from specific ports.
+Useful against poorly configured firewall rules that trust traffic from particular source ports.
 
 ---
 
-### Packet Fragmentation
+## Packet Fragmentation
 
 ```bash
 sudo nmap -sS -f <TARGET>
 ```
 
-Fragment IP packets.
+🔴 Fragment IP packets.
 
 ```bash
 sudo nmap -sS --mtu 8 <TARGET>
 ```
 
-Specify the fragment size.
+🔴 Specify fragment size.
 
 ---
 
-### Decoys
+## Decoys
 
 ```bash
 sudo nmap -sS -D RND:5 <TARGET>
 ```
 
-Generate random decoy sources.
+🔴 Generate random decoy sources.
 
-Conceptually:
+Concept:
 
 ```text
 Your scan
-   +
+    +
 Decoy
-   +
+    +
 Decoy
-   +
+    +
 Decoy
 ```
 
 ---
 
-### Source IP
+## Source IP
 
 ```bash
 sudo nmap -S <SOURCE_IP> <TARGET>
 ```
 
-Specify a source IP.
+🔴 Specify source IP.
 
 ---
 
-### Network Interface
+## Network Interface
 
 ```bash
 sudo nmap -e tun0 <TARGET>
 ```
 
-Specify the network interface.
+🔵 Specify network interface.
 
-Useful when scanning through a VPN such as an HTB VPN interface.
+Useful when working through an HTB VPN interface.
 
 ---
 
-## 14. Firewall States
+# 🟡 14. Firewall State Interpretation
 
-| State              | Meaning                                            |
-| ------------------ | -------------------------------------------------- |
-| `open`             | A service is listening                             |
-| `closed`           | Host is reachable but no service is listening      |
-| `filtered`         | Filtering prevents Nmap from determining the state |
-| `open\|filtered`   | Nmap cannot distinguish                            |
-| `closed\|filtered` | Nmap cannot distinguish                            |
+| State                 | Meaning                              |
+| --------------------- | ------------------------------------ |
+| 🟢 `open`             | Service is listening                 |
+| ⚫ `closed`            | Host reachable, no service listening |
+| 🔴 `filtered`         | Filtering prevents determining state |
+| 🟡 `open\|filtered`   | Cannot distinguish                   |
+| 🟡 `closed\|filtered` | Cannot distinguish                   |
 
-### Remember
+### Quick Logic
 
 ```text
-OPEN
-  ↓
+🟢 OPEN
+   ↓
 Service responds
 
-CLOSED
-  ↓
+⚫ CLOSED
+   ↓
 Host responds but no service
 
-FILTERED
-  ↓
-Firewall/filter interferes
+🔴 FILTERED
+   ↓
+Firewall / filter interferes
 ```
 
 ---
 
-## 15. Packet Tracing
+# 🟡 15. `--reason`
+
+```bash
+sudo nmap --reason <TARGET>
+```
+
+Example:
+
+```text
+PORT   STATE     SERVICE  REASON
+22/tcp open      ssh      syn-ack
+80/tcp open      http     syn-ack
+21/tcp closed    ftp      reset
+443/tcp filtered https    no-response
+```
+
+### Interpretation
+
+| Reason             | Meaning                           |
+| ------------------ | --------------------------------- |
+| `syn-ack`          | 🟢 SYN/ACK received → open        |
+| `reset`            | ⚫ TCP RST received → closed       |
+| `no-response`      | 🔴 No response → likely filtering |
+| `admin-prohibited` | 🔴 Traffic explicitly prohibited  |
+
+---
+
+# 🟡 16. Packet Tracing
 
 ```bash
 sudo nmap --packet-trace <TARGET>
 ```
 
-Display packets sent and received by Nmap.
+Shows packets sent and received.
 
 Useful for understanding:
 
@@ -460,19 +498,7 @@ sudo nmap -Pn --packet-trace -p80 <TARGET>
 
 ---
 
-## 16. DNS Resolution
-
-```bash
-nmap -n <TARGET>
-```
-
-Disable DNS resolution.
-
-Useful for faster and cleaner scans.
-
----
-
-## 17. Saving Nmap Results
+# ⚫ 17. Saving Results
 
 ### Normal
 
@@ -480,11 +506,15 @@ Useful for faster and cleaner scans.
 sudo nmap -oN scan.nmap <TARGET>
 ```
 
+⚫ Human-readable output.
+
 ### Grepable
 
 ```bash
 sudo nmap -oG scan.gnmap <TARGET>
 ```
+
+⚫ Grep-friendly format.
 
 ### XML
 
@@ -492,7 +522,9 @@ sudo nmap -oG scan.gnmap <TARGET>
 sudo nmap -oX scan.xml <TARGET>
 ```
 
-### All major formats
+⚫ XML format.
+
+### All Formats
 
 ```bash
 sudo nmap -oA scan <TARGET>
@@ -508,17 +540,17 @@ scan.xml
 
 ---
 
-## 18. XML → HTML
+# ⚫ 18. XML → HTML
 
 ```bash
 xsltproc scan.xml -o scan.html
 ```
 
-Convert Nmap XML output into an HTML report.
+Convert Nmap XML results into HTML.
 
 ---
 
-## 19. Multiple Targets
+# 🟢 19. Multiple Targets
 
 ### Multiple IPs
 
@@ -546,152 +578,275 @@ nmap -iL hosts.txt
 
 ---
 
-# CPTS Nmap Methodology
+# 🟡 20. Scan Output Interpretation
+
+## Example — Open
 
 ```text
-             TARGET
-                │
-                ▼
-       ┌─────────────────┐
-       │ HOST DISCOVERY  │
-       │ -sn / -Pn       │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │ FULL TCP SCAN   │
-       │ -sS -p-         │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │ SERVICE ENUM    │
-       │ -sC -sV         │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │ NSE ENUMERATION │
-       │ --script        │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │ UDP ENUMERATION │
-       │ -sU             │
-       └────────┬────────┘
-                ▼
-          FILTERED?
-                │
-                ▼
-       ┌─────────────────┐
-       │ FIREWALL / IDS  │
-       │ / IPS ANALYSIS  │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │ EVASION         │
-       │ ACK / Fragment  │
-       │ Source Port etc │
-       └────────┬────────┘
-                ▼
-       RE-ENUMERATE SERVICE
-                │
-                ▼
-             EXPLOIT
+22/tcp open ssh OpenSSH 8.2p1 Ubuntu
+```
+
+Think:
+
+```text
+🟢 OPEN
+   ↓
+SSH is listening
+   ↓
+OpenSSH 8.2p1
+   ↓
+Enumerate SSH
 ```
 
 ---
 
-# ⭐ Top 10 Commands to Memorize
+## Example — Closed
+
+```text
+21/tcp closed ftp
+```
+
+Think:
+
+```text
+⚫ CLOSED
+   ↓
+Host is reachable
+   ↓
+No FTP service listening
+```
+
+---
+
+## Example — Filtered
+
+```text
+443/tcp filtered https
+```
+
+Think:
+
+```text
+🔴 FILTERED
+   ↓
+Firewall / ACL / IDS / IPS?
+   ↓
+Investigate
+```
+
+---
+
+## Example — UDP
+
+```text
+53/udp open|filtered domain
+```
+
+Think:
+
+```text
+🟡 OPEN|FILTERED
+       ↓
+UDP response insufficient
+       ↓
+Use -sV / NSE
+```
+
+---
+
+## Example — Hidden Service
+
+```text
+50000/tcp filtered
+```
+
+Think:
+
+```text
+🔴 FILTERED
+     ↓
+Unusual high port
+     ↓
+Possible firewall filtering
+     ↓
+Investigate with appropriate technique
+     ↓
+Re-enumerate
+```
+
+---
+
+# 🔥 21. CPTS Nmap Methodology
+
+```text
+                  🎯 TARGET
+                     │
+                     ▼
+             🟢 HOST DISCOVERY
+                  -sn / -Pn
+                     │
+                     ▼
+             🔵 FULL TCP SCAN
+                    -sS -p-
+                     │
+                     ▼
+             🟢 SERVICE ENUM
+                    -sC -sV
+                     │
+                     ▼
+             🟣 NSE ENUMERATION
+                  --script
+                     │
+                     ▼
+             🔵 UDP ENUMERATION
+                     -sU
+                     │
+                     ▼
+              🔴 FILTERED?
+                     │
+                     ▼
+           🟡 FIREWALL ANALYSIS
+                     │
+                     ▼
+             🔴 EVASION TESTING
+          ACK / Fragment / Source Port
+                     │
+                     ▼
+             🟢 RE-ENUMERATE
+                     │
+                     ▼
+                 💥 EXPLOIT
+```
+
+---
+
+# ⭐ 22. Top 10 Commands
 
 ```bash
-# 1. Host discovery
+# 🟢 1. Host discovery
 sudo nmap -sn <TARGET>
 
-# 2. Full TCP scan
+# 🔵 2. Full TCP scan
 sudo nmap -sS -p- -T4 <TARGET>
 
-# 3. Skip host discovery
+# 🟢 3. Skip host discovery
 sudo nmap -Pn <TARGET>
 
-# 4. Service/version enumeration
+# 🟢 4. Service/version enumeration
 sudo nmap -sC -sV -p<PORTS> <TARGET>
 
-# 5. UDP enumeration
+# 🔵 5. UDP enumeration
 sudo nmap -sU -p<PORTS> <TARGET>
 
-# 6. NSE
+# 🟣 6. NSE
 sudo nmap --script <SCRIPT> <TARGET>
 
-# 7. Vulnerability NSE
+# 🟣 7. Vulnerability NSE
 sudo nmap --script vuln -p<PORTS> <TARGET>
 
-# 8. Packet tracing
+# 🟡 8. Packet tracing
 sudo nmap --packet-trace <TARGET>
 
-# 9. Source-port manipulation
+# 🔴 9. Source-port manipulation
 sudo nmap -sS -p<PORT> --source-port 53 <TARGET>
 
-# 10. Save results
+# ⚫ 10. Save results
 sudo nmap -oA scan <TARGET>
 ```
 
 ---
 
-# 🧠 One-Line Methodology
+# 🧠 23. Quick Reference
 
 ```text
-DISCOVER
-   ↓
-SCAN ALL PORTS
-   ↓
-ENUMERATE SERVICES
-   ↓
-NSE
-   ↓
-UDP
-   ↓
-ANALYZE FILTERING
-   ↓
-EVASION
-   ↓
-RE-ENUMERATE
-   ↓
-EXPLOIT
-```
-
----
-
-## Quick Reference
-
-```text
+🔵 SCANNING
 -sS       TCP SYN scan
 -sT       TCP Connect scan
 -sU       UDP scan
+-p-       All TCP ports
+-p 80     Specific port
+--top-ports 100   Top 100 ports
+
+🟢 ENUMERATION
 -sV       Service/version detection
 -sC       Default NSE scripts
 -O        OS detection
 -A        Aggressive scan
+--script  NSE scripts
 -sn       Host discovery
 -Pn       Skip host discovery
--p-       All TCP ports
--p 80     Specific port
+
+🟡 ANALYSIS
 -n        Disable DNS
 -v        Verbose
 -vv       Very verbose
+--reason  Explain port state
+--packet-trace  Show packets
+
+🔴 EVASION
 -sA       ACK scan
 -f        Fragment packets
---mtu     Set fragment size
+--mtu     Fragment size
 -D        Decoys
 -S        Source IP
 -e        Network interface
 --source-port 53   Source port 53
---packet-trace     Show packets
---reason            Explain port state
+
+⚫ PERFORMANCE / OUTPUT
 -T0..T5             Timing templates
 --min-rate          Minimum packet rate
 --max-retries       Maximum retries
+--stats-every       Progress updates
 -oN                 Normal output
 -oG                 Grepable output
 -oX                 XML output
--oA                 All output formats
+-oA                 All formats
 ```
 
-> **CPTS mindset:** Nmap is not just a port scanner. Use it to build an attack surface: **hosts → ports → services → versions → scripts → vulnerabilities → exploitation.**
+---
+
+# 🚨 24. Golden Rules
+
+```text
+🟢 1. OPEN ≠ Vulnerable
+
+⚫ 2. CLOSED ≠ Host is down
+
+🔴 3. FILTERED ≠ Port is closed
+
+🟡 4. SERVICE name ≠ Confirmed application
+
+🟢 5. VERSION information is valuable
+
+🟡 6. OS detection is an estimate
+
+🔎 7. Always investigate unusual ports
+
+🔵 8. UDP commonly produces open|filtered
+
+🧠 9. Use --reason when confused
+
+🔄 10. Re-enumerate after discovering something interesting
+```
+
+---
+
+# 🏆 CPTS Mindset
+
+```text
+HOST
+ ↓
+PORTS
+ ↓
+SERVICES
+ ↓
+VERSIONS
+ ↓
+NSE
+ ↓
+VULNERABILITIES
+ ↓
+EXPLOITATION
+```
+
+> **Nmap isn't just a port scanner. It is the first major step in building your attack surface.**
