@@ -1,0 +1,363 @@
+SMTP Enumeration
+
+## Overview
+
+**SMTP (Simple Mail Transfer Protocol)** is primarily used for sending email between mail clients and mail servers.
+
+During penetration testing, SMTP can be valuable for:
+
+- Identifying mail server software and version
+- Discovering server hostname
+- Enumerating supported SMTP commands
+- Enumerating valid usernames
+- Checking authentication mechanisms
+- Checking STARTTLS support
+- Testing for open relay misconfiguration
+
+---
+
+## 1. SMTP Ports
+
+| Port | Purpose |
+|---|---|
+| 25/TCP | Traditional SMTP server-to-server communication |
+| 587/TCP | Mail submission, commonly with authentication + STARTTLS |
+| 465/TCP | SMTP over TLS |
+
+For enumeration, **port 25** is commonly the first port to check.
+
+---
+
+## 2. SMTP Enumeration Methodology
+
+```text
+Discover Port 25
+       ↓
+Identify SMTP Software + Version
+       ↓
+Grab Banner
+       ↓
+EHLO / HELO
+       ↓
+Enumerate SMTP Capabilities
+       ↓
+Check VRFY / EXPN
+       ↓
+Enumerate Usernames
+       ↓
+Check STARTTLS / AUTH
+       ↓
+Test for Open Relay
+3. Nmap SMTP Enumeration
+Basic scan
+nmap -sC -sV -p25 <TARGET>
+What the options mean
+-sC   → Run default NSE scripts
+-sV   → Detect service/version
+-p25  → Scan TCP port 25
+
+Example:
+
+nmap -sC -sV -p25 10.129.42.195
+4. SMTP Banner Grabbing
+
+A typical SMTP server sends a banner immediately after connection.
+
+Example:
+
+220 InFreight ESMTP v2.11
+
+This reveals:
+
+Software: InFreight ESMTP
+Version:  v2.11
+Manual banner grabbing
+telnet <TARGET> 25
+
+Example:
+
+telnet 10.129.42.195 25
+
+Expected:
+
+220 InFreight ESMTP v2.11
+5. HELO vs EHLO
+HELO
+HELO test
+
+Used to introduce the SMTP client.
+
+Example:
+
+250 mail1
+EHLO
+EHLO test
+
+Used for Extended SMTP and allows the server to return its supported capabilities.
+
+Example:
+
+250-mail1
+250-PIPELINING
+250-SIZE 10240000
+250-VRFY
+250-ETRN
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-8BITMIME
+250-DSN
+250-SMTPUTF8
+250 CHUNKING
+
+During enumeration, EHLO is more useful because it exposes the server's supported SMTP extensions.
+
+6. Important SMTP Commands
+Command	Purpose
+HELO	Start SMTP session
+EHLO	Start Extended SMTP session
+MAIL FROM	Specify sender
+RCPT TO	Specify recipient
+DATA	Start email body
+VRFY	Verify whether a user/mailbox exists
+EXPN	Enumerate mailing lists/recipients
+RSET	Reset current SMTP transaction
+NOOP	Keep connection alive
+QUIT	Close SMTP connection
+7. VRFY — Username Enumeration
+
+VRFY can be used to determine whether a username/mailbox exists.
+
+Manual test:
+
+VRFY root
+
+Example response:
+
+252 2.0.0 root
+
+Test an invalid username:
+
+VRFY test123456789
+
+Example:
+
+550 5.1.1 <test123456789>: Recipient address rejected: User unknown in local recipient table
+
+The important point is to compare responses.
+
+252 → Server may be accepting/handling the recipient
+550 → User unknown
+250 → Strong indication of successful verification
+Important
+
+Do not automatically assume every 252 response means the username exists.
+
+SMTP servers can return 252 without confirming the account, so enumeration results must be interpreted carefully.
+
+8. Automated Username Enumeration
+
+A useful tool is:
+
+smtp-user-enum
+VRFY enumeration
+smtp-user-enum -M VRFY -U <WORDLIST> -t <TARGET>
+
+Example:
+
+smtp-user-enum -M VRFY -U footprinting-wordlist.txt -t 10.129.42.195
+Options
+-M VRFY
+    Use SMTP VRFY method
+
+-U <WORDLIST>
+    Username wordlist
+
+-t <TARGET>
+    SMTP server target
+
+The tool automatically tests usernames from the supplied wordlist.
+
+Example result:
+
+10.129.42.195: ROBIN exists
+
+Therefore:
+
+Valid username → ROBIN
+9. Nmap SMTP User Enumeration
+
+Nmap also provides an SMTP username enumeration script.
+
+nmap -p25 --script smtp-enum-users \
+--script-args smtp-enum-users.userdb=wordlist.txt <TARGET>
+
+Example:
+
+nmap -p25 --script smtp-enum-users \
+--script-args smtp-enum-users.userdb=footprinting-wordlist.txt \
+10.129.42.195
+10. SMTP Open Relay
+
+An open relay is an SMTP server that allows unauthorized users to relay email through it.
+
+Potentially dangerous configuration:
+
+mynetworks = 0.0.0.0/0
+
+This can effectively trust all IP addresses.
+
+Nmap test
+nmap <TARGET> -p25 --script smtp-open-relay -v
+
+The smtp-open-relay NSE script performs multiple relay tests.
+
+11. STARTTLS
+
+SMTP can support encryption through STARTTLS.
+
+Check capabilities:
+
+EHLO test
+
+Look for:
+
+250-STARTTLS
+
+If present, the server supports upgrading the SMTP connection to TLS.
+
+Manual testing:
+
+openssl s_client -connect <TARGET>:25 -starttls smtp
+12. SMTP Configuration
+
+A common Postfix configuration file is:
+
+/etc/postfix/main.cf
+
+Important settings include:
+
+smtpd_banner
+myhostname
+mydestination
+mynetworks
+smtp_bind_address
+home_mailbox
+
+Potentially dangerous configuration:
+
+mynetworks = 0.0.0.0/0
+
+This can result in an open SMTP relay.
+
+13. Practical HTB Lab
+Target
+10.129.42.195
+Initial scan
+nmap -sC -sV -p25 10.129.42.195
+Result
+25/tcp open smtp
+Banner
+220 InFreight ESMTP v2.11
+SMTP capabilities
+PIPELINING
+SIZE 10240000
+VRFY
+ETRN
+STARTTLS
+ENHANCEDSTATUSCODES
+8BITMIME
+DSN
+SMTPUTF8
+CHUNKING
+Manual connection
+telnet 10.129.42.195 25
+EHLO
+EHLO test
+VRFY test
+VRFY root
+
+Response:
+
+252 2.0.0 root
+
+Testing an invalid username:
+
+VRFY test123456789
+
+Response:
+
+550 5.1.1 <test123456789>: Recipient address rejected: User unknown in local recipient table
+Automated enumeration
+smtp-user-enum -M VRFY -U footprinting-wordlist.txt -t 10.129.42.195
+Valid username discovered
+ROBIN
+14. HTB Answers
+Q1 → InFreight ESMTP v2.11
+
+Q2 → ROBIN
+15. Quick SMTP Cheatsheet
+# Nmap service detection
+nmap -sC -sV -p25 <TARGET>
+
+# Connect manually
+telnet <TARGET> 25
+
+# SMTP greeting
+HELO test
+
+# Extended SMTP greeting
+EHLO test
+
+# Verify user
+VRFY username
+
+# User enumeration
+smtp-user-enum -M VRFY -U <WORDLIST> -t <TARGET>
+
+# Nmap user enumeration
+nmap -p25 --script smtp-enum-users \
+--script-args smtp-enum-users.userdb=<WORDLIST> <TARGET>
+
+# Test open relay
+nmap <TARGET> -p25 --script smtp-open-relay -v
+
+# STARTTLS
+openssl s_client -connect <TARGET>:25 -starttls smtp
+16. CPTS Mindset
+
+When you see:
+
+25/tcp open smtp
+
+Think:
+
+SMTP
+ ↓
+Banner / Version
+ ↓
+EHLO
+ ↓
+Capabilities
+ ↓
+VRFY
+ ↓
+EXPN
+ ↓
+Username Enumeration
+ ↓
+STARTTLS / AUTH
+ ↓
+Open Relay
+Key Takeaway
+
+SMTP enumeration is not just about identifying the mail server.
+
+The goal is to extract useful information from its behavior:
+
+Banner → Software/Version
+EHLO → Capabilities
+VRFY → Possible usernames
+EXPN → Possible recipient/list information
+STARTTLS → Encryption support
+AUTH → Authentication mechanisms
+Open Relay → Misconfiguration

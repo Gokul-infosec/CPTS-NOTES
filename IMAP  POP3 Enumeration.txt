@@ -1,0 +1,420 @@
+ IMAP / POP3 Enumeration
+
+## Overview
+
+IMAP and POP3 are email protocols used to access mail servers.
+
+- **IMAP** — Internet Message Access Protocol
+- **POP3** — Post Office Protocol
+- IMAP keeps emails on the server and supports folders/synchronization.
+- POP3 is mainly used to retrieve emails.
+
+### Default Ports
+
+| Protocol | Port | Description |
+|---|---:|---|
+| IMAP | 143 | IMAP |
+| IMAPS | 993 | IMAP over TLS |
+| POP3 | 110 | POP3 |
+| POP3S | 995 | POP3 over TLS |
+
+---
+
+# 1. Port Enumeration
+
+Start by scanning the common IMAP/POP3 ports:
+
+```bash
+nmap -sC -sV -p110,143,993,995 <TARGET>
+
+Look for:
+
+Mail server software
+Version
+Service banners
+TLS certificates
+Hostname/FQDN
+Organization
+Authentication methods
+Server capabilities
+2. IMAP Enumeration
+Common Ports
+143  → IMAP
+993  → IMAPS
+
+IMAP supports:
+
+Server-side email management
+Mailbox/folder structures
+Synchronization
+Multiple clients
+Important IMAP Commands
+A001 LOGIN username password
+A002 LIST "" *
+A003 SELECT INBOX
+A004 SEARCH ALL
+A005 FETCH 1 ALL
+A006 FETCH 1 BODY[]
+A007 LOGOUT
+Command Purpose
+Command	Purpose
+LOGIN	Authenticate
+LIST	Enumerate mailboxes
+SELECT	Select a mailbox
+SEARCH	Search messages
+FETCH	Retrieve messages
+LOGOUT	Close session
+3. Connect to IMAPS
+
+Use OpenSSL against port 993:
+
+openssl s_client -connect <TARGET>:993
+
+After connecting, inspect the server greeting:
+
+* OK [CAPABILITY IMAP4rev1 ...]
+
+This can reveal:
+
+IMAP version
+Authentication methods
+Server capabilities
+Sometimes HTB flags
+4. TLS Certificate Enumeration
+
+OpenSSL can expose useful certificate information:
+
+openssl s_client -connect <TARGET>:993
+
+Look for:
+
+subject=
+issuer=
+CN=
+O=
+OU=
+emailAddress=
+
+Certificate information may reveal:
+
+Organization
+Hostname
+Department
+Email address
+Certificate validity
+Internal naming conventions
+
+Important: certificate information is a clue. Do not automatically assume an email address found in the certificate is the answer to an HTB question.
+
+5. POP3 Enumeration
+Common Ports
+110  → POP3
+995  → POP3S
+Important POP3 Commands
+USER <username>
+PASS <password>
+STAT
+LIST
+RETR <message-id>
+DELE <message-id>
+CAPA
+RSET
+QUIT
+Command Purpose
+Command	Purpose
+USER	Specify username
+PASS	Authenticate
+STAT	Show mailbox status
+LIST	List messages
+RETR	Retrieve message
+DELE	Mark message for deletion
+CAPA	Show server capabilities
+RSET	Reset session
+QUIT	Close connection
+6. Connect to POP3S
+openssl s_client -connect <TARGET>:995
+
+Then:
+
+USER robin
+PASS robin
+LIST
+RETR 1
+7. IMAP Enumeration Methodology
+Nmap
+  ↓
+Identify IMAP/POP3
+  ↓
+Enumerate versions/banners
+  ↓
+Inspect TLS certificate
+  ↓
+Identify hostnames/emails
+  ↓
+Check authentication methods
+  ↓
+Use discovered credentials
+  ↓
+LOGIN
+  ↓
+LIST mailboxes
+  ↓
+SELECT interesting mailbox
+  ↓
+SEARCH messages
+  ↓
+FETCH message
+  ↓
+Read email body
+  ↓
+Extract useful information
+8. HTB Lab Example
+Target
+10.129.180.180
+
+Initial scan:
+
+nmap -sC -sV -p110,143,993,995 10.129.180.180
+Discovered Services
+110  → Dovecot pop3d
+143  → Dovecot imapd
+993  → Dovecot imapd
+995  → Dovecot pop3d
+Certificate Information
+Organization: InlaneFreight Ltd
+FQDN: dev.inlanefreight.htb
+9. IMAPS Enumeration
+
+Connect:
+
+openssl s_client -connect 10.129.180.180:993
+
+Server greeting:
+
+* OK [CAPABILITY IMAP4rev1 SASL-IR LOGIN-REFERRALS ID ENABLE IDLE LITERAL+ AUTH=PLAIN] HTB{roncfbw7iszerd7shni7jr2343zhrj}
+Q3
+HTB{roncfbw7iszerd7shni7jr2343zhrj}
+10. POP3 Version Enumeration
+
+Connect:
+
+openssl s_client -connect 10.129.180.180:995
+
+Server banner:
+
++OK InFreight POP3 v9.188
+Q4
+InFreight POP3 v9.188
+11. Credential Reuse
+
+Previous SMTP enumeration revealed:
+
+Username: robin
+Password: robin
+
+Use the credentials against IMAP:
+
+A001 LOGIN robin robin
+
+Successful authentication:
+
+A001 OK ... Logged in
+
+Lesson: credentials discovered during enumeration of one service may be valid on another service.
+
+12. Enumerate Mailboxes
+
+After authentication:
+
+A002 LIST "" *
+
+Example result:
+
+* LIST (\Noselect \HasChildren) "." DEV
+* LIST (\Noselect \HasChildren) "." DEV.DEPARTMENT
+* LIST (\HasNoChildren) "." DEV.DEPARTMENT.INT
+* LIST (\HasNoChildren) "." INBOX
+
+Important:
+
+Do not assume that INBOX contains all emails.
+
+Always enumerate the other available mailboxes.
+
+13. Check INBOX
+A003 SELECT INBOX
+A004 SEARCH ALL
+
+If the result is:
+
+* 0 EXISTS
+* SEARCH
+
+The INBOX is empty.
+
+Move on to other mailboxes.
+
+14. Enumerate Interesting Mailbox
+
+Select:
+
+A005 SELECT DEV.DEPARTMENT.INT
+
+Search:
+
+A006 SEARCH ALL
+
+Result:
+
+* SEARCH 1
+
+This means message ID 1 exists.
+
+15. Fetch Email
+A007 FETCH 1 ALL
+
+The email envelope revealed:
+
+Subject: Flag
+From: CTO
+Email: devadmin@inlanefreight.htb
+To: robin@inlanefreight.htb
+Q5
+devadmin@inlanefreight.htb
+16. Fetch Email Body
+
+FETCH 1 ALL may return metadata/envelope information without the complete body.
+
+Retrieve the body with:
+
+A008 FETCH 1 BODY[]
+
+Other useful commands:
+
+A008 FETCH 1 BODY[HEADER]
+A009 FETCH 1 BODY[TEXT]
+
+The message body may contain:
+
+Flags
+Credentials
+Internal information
+Sensitive data
+Additional attack-path information
+17. cURL IMAPS
+
+IMAPS can also be accessed using cURL:
+
+curl -k 'imaps://<TARGET>' --user username:password -v
+
+Example:
+
+curl -k 'imaps://10.129.180.180' --user robin:robin -v
+
+Useful for viewing:
+
+TLS information
+Server capabilities
+Mailbox information
+18. IMAP vs POP3
+Feature	IMAP	POP3
+Default Port	143	110
+TLS Port	993	995
+Server-side folders	Yes	Limited
+Synchronization	Yes	No
+Multiple clients	Yes	Limited
+Main purpose	Manage/sync mail	Retrieve mail
+Pentest value	Mailbox enumeration	Message retrieval
+19. CPTS Checklist
+[ ] Scan 110/143/993/995
+[ ] Identify mail server
+[ ] Identify version
+[ ] Check banners
+[ ] Check capabilities
+[ ] Inspect TLS certificate
+[ ] Extract CN/FQDN
+[ ] Extract organization
+[ ] Look for email addresses
+[ ] Check authentication methods
+[ ] Test legitimately discovered credentials
+[ ] LOGIN
+[ ] LIST all mailboxes
+[ ] SELECT interesting mailboxes
+[ ] SEARCH ALL
+[ ] FETCH messages
+[ ] Fetch BODY[]
+[ ] Read email content
+[ ] Look for credentials
+[ ] Look for internal information
+[ ] Look for flags
+20. Key Takeaways
+1. Scan all mail ports
+nmap -sC -sV -p110,143,993,995 <TARGET>
+2. Inspect certificates
+openssl s_client -connect <TARGET>:993
+
+Certificates can reveal internal hostnames, organizations and email addresses.
+
+3. Enumerate mailboxes
+LIST "" *
+4. Don't focus only on INBOX
+SELECT INBOX
+
+If it is empty, enumerate the other folders.
+
+5. Search for messages
+SEARCH ALL
+6. Fetch messages
+FETCH <ID> ALL
+FETCH <ID> BODY[]
+7. Reuse discovered credentials
+
+Credentials found during SMTP/service enumeration may work against IMAP or POP3.
+
+IMAP/POP3 Enumeration Cheat Sheet
+# Scan mail services
+nmap -sC -sV -p110,143,993,995 <TARGET>
+
+# IMAPS
+openssl s_client -connect <TARGET>:993
+
+# POP3S
+openssl s_client -connect <TARGET>:995
+IMAP
+A001 LOGIN username password
+A002 LIST "" *
+A003 SELECT INBOX
+A004 SEARCH ALL
+A005 FETCH 1 ALL
+A006 FETCH 1 BODY[]
+A007 LOGOUT
+POP3
+USER username
+PASS password
+STAT
+LIST
+RETR 1
+CAPA
+QUIT
+Mental Model
+SCAN
+  ↓
+IDENTIFY
+  ↓
+CERTIFICATE
+  ↓
+CREDENTIALS
+  ↓
+LOGIN
+  ↓
+LIST
+  ↓
+SELECT
+  ↓
+SEARCH
+  ↓
+FETCH
+  ↓
+READ
+  ↓
+EXTRACT

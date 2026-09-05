@@ -1,0 +1,458 @@
+# NFS Enumeration
+
+## 📌 Overview
+
+**NFS (Network File System)** is commonly used in Linux/Unix environments to share directories and files over a network.
+
+NFS enumeration focuses on discovering:
+
+* NFS versions
+* RPC services
+* Exported directories
+* Access permissions
+* UID/GID mappings
+* Misconfigured exports
+* Sensitive files
+* Potential privilege-escalation opportunities
+
+---
+
+## 🔌 Important Ports
+
+| Port           | Service    | Purpose                    |
+| -------------- | ---------- | -------------------------- |
+| `111/TCP/UDP`  | `rpcbind`  | Maps RPC programs to ports |
+| `2049/TCP/UDP` | `NFS`      | NFS service                |
+| Dynamic        | `mountd`   | Handles mount requests     |
+| Dynamic        | `nlockmgr` | Network locking            |
+
+---
+
+# 🔎 NFS Enumeration Methodology
+
+```text
+Nmap
+  ↓
+Identify RPC/NFS
+  ↓
+Enumerate RPC services
+  ↓
+Enumerate NFS exports
+  ↓
+Mount accessible shares
+  ↓
+Enumerate files & permissions
+  ↓
+Check UID/GID mapping
+  ↓
+Look for sensitive files / misconfigurations
+```
+
+---
+
+# 1️⃣ Nmap Enumeration
+
+Scan the primary NFS/RPC ports:
+
+```bash
+sudo nmap -p111,2049 -sV -sC <TARGET>
+```
+
+Example:
+
+```bash
+sudo nmap -p111,2049 -sV -sC 10.129.202.5
+```
+
+Useful information:
+
+* `rpcbind`
+* NFS versions
+* RPC programs
+* `nlockmgr`
+* `nfs_acl`
+* NFS protocol versions
+
+Example finding:
+
+```text
+111/tcp   open  rpcbind
+2049/tcp  open  nfs
+```
+
+---
+
+# 2️⃣ Enumerate NFS Exports
+
+Use:
+
+```bash
+showmount -e <TARGET>
+```
+
+Example:
+
+```bash
+showmount -e 10.129.202.5
+```
+
+Example output:
+
+```text
+Export list for 10.129.202.5:
+/var/nfs       10.0.0.0/8
+/mnt/nfsshare  10.0.0.0/8
+```
+
+### 🎯 Important
+
+The output tells us:
+
+* Which directories are exported
+* Which networks/hosts are allowed to access them
+
+A broad network such as:
+
+```text
+10.0.0.0/8
+```
+
+means a large range of hosts is permitted to access the export.
+
+---
+
+# 3️⃣ NFS NSE Scripts
+
+Nmap provides NFS-related NSE scripts:
+
+```bash
+sudo nmap --script nfs* <TARGET> -sV -p111,2049
+```
+
+Useful scripts include:
+
+```text
+nfs-ls
+nfs-showmount
+nfs-statfs
+rpcinfo
+```
+
+These can provide information about:
+
+* Exported shares
+* Directory contents
+* Files
+* Filesystem statistics
+* RPC services
+
+---
+
+# 4️⃣ Mount an NFS Share
+
+Create a local mount point:
+
+```bash
+mkdir ~/target-NFS
+```
+
+Mount the export:
+
+```bash
+sudo mount -t nfs <TARGET>:/<EXPORT> ~/target-NFS -o nolock
+```
+
+Example:
+
+```bash
+sudo mount -t nfs 10.129.202.5:/var/nfs ~/target-NFS -o nolock
+```
+
+Verify:
+
+```bash
+mount | grep target-NFS
+```
+
+---
+
+# 5️⃣ Enumerate Mounted Files
+
+List files:
+
+```bash
+ls -la ~/target-NFS
+```
+
+Detailed listing:
+
+```bash
+ls -l ~/target-NFS
+```
+
+Display numeric UID/GID:
+
+```bash
+ls -n ~/target-NFS
+```
+
+`ls -n` is especially useful because NFS authentication commonly relies on **UID/GID mappings**.
+
+Example:
+
+```text
+-rw-r--r-- 1 nobody nogroup 39 flag.txt
+```
+
+This can indicate how the remote file ownership maps to the local system.
+
+---
+
+# 6️⃣ Read Accessible Files
+
+If a file is readable:
+
+```bash
+cat ~/target-NFS/flag.txt
+```
+
+Search recursively:
+
+```bash
+find ~/target-NFS -type f
+```
+
+Look for interesting files:
+
+```bash
+find ~/target-NFS -type f -name "*.txt"
+find ~/target-NFS -type f -name "id_rsa"
+find ~/target-NFS -type f -name "*.conf"
+```
+
+Potentially sensitive information can include:
+
+* SSH keys
+* Configuration files
+* Credentials
+* Application data
+* Backup files
+* Flags
+
+---
+
+# 7️⃣ NFS Export Misconfigurations
+
+Important `/etc/exports` options:
+
+```text
+rw
+ro
+sync
+async
+secure
+insecure
+no_subtree_check
+root_squash
+no_root_squash
+```
+
+### ⚠️ Dangerous Settings
+
+```text
+rw
+insecure
+nohide
+no_root_squash
+```
+
+### `no_root_squash`
+
+Normally:
+
+```text
+root_squash
+```
+
+prevents remote root from being treated as root on the NFS server.
+
+With:
+
+```text
+no_root_squash
+```
+
+root privileges can potentially be preserved across the NFS share.
+
+🚨 This can become a **privilege-escalation attack path** in vulnerable configurations.
+
+---
+
+# 8️⃣ UID/GID Mapping
+
+NFS commonly relies on:
+
+```text
+UID
+GID
+Group membership
+```
+
+Check ownership numerically:
+
+```bash
+ls -ln ~/target-NFS
+```
+
+Why?
+
+Different systems may map the same UID/GID to different usernames.
+
+Example:
+
+```text
+Remote UID 1000 → userA
+Local UID 1000  → userB
+```
+
+This can create security issues when permissions are poorly configured.
+
+---
+
+# 9️⃣ Unmount the Share
+
+When finished:
+
+```bash
+sudo umount ~/target-NFS
+```
+
+If necessary:
+
+```bash
+mount | grep target-NFS
+```
+
+to verify it was unmounted.
+
+---
+
+# 🧪 HTB Practical Workflow
+
+```bash
+# 1. Identify NFS/RPC
+sudo nmap -p111,2049 -sV -sC <TARGET>
+
+# 2. Enumerate exports
+showmount -e <TARGET>
+
+# 3. Create mount point
+mkdir ~/target-NFS
+
+# 4. Mount export
+sudo mount -t nfs <TARGET>:/<EXPORT> ~/target-NFS -o nolock
+
+# 5. Enumerate
+ls -la ~/target-NFS
+ls -l ~/target-NFS
+ls -n ~/target-NFS
+
+# 6. Search files
+find ~/target-NFS -type f
+
+# 7. Read interesting files
+cat ~/target-NFS/<FILE>
+
+# 8. Unmount
+sudo umount ~/target-NFS
+```
+
+---
+
+# 🧠 CPTS Enumeration Mindset
+
+Don't stop at:
+
+```text
+NFS is running.
+```
+
+Think:
+
+```text
+NFS running
+    ↓
+Which versions?
+    ↓
+Which RPC services?
+    ↓
+Which exports?
+    ↓
+Who can access them?
+    ↓
+Can I mount them?
+    ↓
+What files are exposed?
+    ↓
+Who owns those files?
+    ↓
+How are UID/GID mapped?
+    ↓
+Are there dangerous export options?
+    ↓
+Is there a possible attack path?
+```
+
+---
+
+# ⚡ NFS Quick Cheatsheet
+
+```bash
+# NFS ports
+111
+2049
+
+# Nmap
+sudo nmap -p111,2049 -sV -sC <TARGET>
+
+# NSE
+sudo nmap --script nfs* <TARGET> -sV -p111,2049
+
+# Exports
+showmount -e <TARGET>
+
+# Mount
+mkdir ~/target-NFS
+sudo mount -t nfs <TARGET>:/<EXPORT> ~/target-NFS -o nolock
+
+# Enumeration
+ls -la ~/target-NFS
+ls -l ~/target-NFS
+ls -n ~/target-NFS
+
+# Search
+find ~/target-NFS -type f
+
+# Read
+cat ~/target-NFS/<FILE>
+
+# Unmount
+sudo umount ~/target-NFS
+```
+
+---
+
+# 🔥 Key Takeaway
+
+> **NFS Enumeration = RPC → Exports → Access → Mount → Files → Permissions → UID/GID → Misconfiguration → Attack Path**
+
+The most important commands to remember:
+
+```bash
+sudo nmap -p111,2049 -sV -sC <TARGET>
+showmount -e <TARGET>
+sudo mount -t nfs <TARGET>:/<EXPORT> ~/target-NFS -o nolock
+ls -la ~/target-NFS
+ls -n ~/target-NFS
+sudo umount ~/target-NFS
+```

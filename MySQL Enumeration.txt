@@ -1,0 +1,369 @@
+ MySQL Enumeration
+
+MySQL enumeration is the process of identifying and interacting with exposed MySQL database services to determine their version, configuration, authentication requirements, databases, tables, and potentially sensitive information.
+
+---
+
+## Default Port
+
+```text
+3306/TCP
+Enumeration Methodology
+Discover 3306
+     ↓
+Identify MySQL/MariaDB
+     ↓
+Determine Version
+     ↓
+Run NSE Scripts
+     ↓
+Check Authentication
+     ↓
+Authenticate if Credentials Are Available
+     ↓
+Enumerate Databases
+     ↓
+Enumerate Tables
+     ↓
+Enumerate Columns
+     ↓
+Query Interesting Records
+     ↓
+Extract Useful Information
+Nmap Enumeration
+
+Basic scan:
+
+nmap -p3306 <TARGET>
+
+Version detection:
+
+sudo nmap -sV -p3306 <TARGET>
+
+MySQL NSE enumeration:
+
+sudo nmap -sV -sC -p3306 --script mysql* <TARGET>
+
+Useful scripts:
+
+mysql-info
+mysql-enum
+mysql-empty-password
+mysql-brute
+mysql-databases
+mysql-users
+mysql-variables
+mysql-dump-hashes
+MySQL Information
+
+mysql-info can reveal:
+
+Protocol version
+MySQL version
+Thread ID
+Capabilities
+Server status
+Authentication plugin
+
+Example:
+
+PORT     STATE SERVICE VERSION
+3306/tcp open  mysql   MySQL 8.0.27-0ubuntu0.20.04.1
+
+Important:
+
+Always manually verify automated scanner results.
+
+Connecting to MySQL
+
+Basic:
+
+mysql -u <USER> -p -h <TARGET>
+
+Password supplied directly:
+
+mysql -u <USER> -p<PASSWORD> -h <TARGET>
+
+Example:
+
+mysql -u robin -probin -h <TARGET>
+TLS Certificate Error
+
+If the lab server uses a self-signed certificate and the client rejects it:
+
+mysql -u robin -probin -h <TARGET> --skip-ssl
+MySQL Enumeration After Login
+List databases
+show databases;
+Select a database
+use <database>;
+List tables
+show tables;
+Show table columns
+show columns from <table>;
+
+or:
+
+describe <table>;
+Dump a table
+select * from <table>;
+Query a specific record
+select * from <table> where <column> = '<value>';
+Query a specific column
+select <column> from <table>;
+Check MySQL version
+select version();
+Important Databases
+information_schema
+
+Contains metadata about databases, tables, columns, and other database objects.
+
+use information_schema;
+show tables;
+mysql
+
+Contains MySQL system information and account/privilege-related information.
+
+use mysql;
+show tables;
+sys
+
+Provides useful views for analyzing the MySQL server.
+
+use sys;
+show tables;
+Configuration
+
+Common configuration file:
+
+/etc/mysql/mysql.conf.d/mysqld.cnf
+
+View configuration:
+
+cat /etc/mysql/mysql.conf.d/mysqld.cnf
+
+Remove comments and blank lines:
+
+cat /etc/mysql/mysql.conf.d/mysqld.cnf | grep -v "#" | sed -r '/^\s*$/d'
+
+Security-relevant settings include:
+
+user
+password
+admin_address
+debug
+sql_warnings
+secure_file_priv
+
+Poorly protected configuration files may expose credentials or other sensitive configuration information.
+
+CPTS Mindset
+
+When you find MySQL, don't stop at the version.
+
+Ask:
+
+What version is running?
+        ↓
+Can I authenticate?
+        ↓
+Are weak/default credentials present?
+        ↓
+What databases exist?
+        ↓
+What tables exist?
+        ↓
+What columns exist?
+        ↓
+What sensitive information is stored?
+        ↓
+What users and privileges exist?
+        ↓
+Can this information lead to another attack path?
+Quick Reference
+Task	Command
+Scan MySQL	nmap -p3306 <TARGET>
+Version	nmap -sV -p3306 <TARGET>
+NSE	sudo nmap -sV -sC -p3306 --script mysql* <TARGET>
+Connect	mysql -u <USER> -p -h <TARGET>
+Skip SSL	mysql -u <USER> -p<PASSWORD> -h <TARGET> --skip-ssl
+Databases	show databases;
+Select DB	use <database>;
+Tables	show tables;
+Columns	show columns from <table>;
+Dump table	select * from <table>;
+Version	select version();
+
+### `commands.md`
+
+```markdown
+# MySQL Commands Cheat Sheet
+
+## Enumeration
+
+```bash
+nmap -p3306 <TARGET>
+
+sudo nmap -sV -p3306 <TARGET>
+
+sudo nmap -sV -sC -p3306 --script mysql* <TARGET>
+Connection
+mysql -u <USER> -p -h <TARGET>
+mysql -u <USER> -p<PASSWORD> -h <TARGET>
+
+If the lab has a self-signed TLS certificate:
+
+mysql -u <USER> -p<PASSWORD> -h <TARGET> --skip-ssl
+SQL Enumeration
+show databases;
+use <database>;
+show tables;
+show columns from <table>;
+describe <table>;
+select * from <table>;
+select version();
+select * from <table> where <column> = '<value>';
+select <column> from <table> where <column> = '<value>';
+Typical Workflow
+Nmap
+ ↓
+3306
+ ↓
+MySQL version
+ ↓
+NSE
+ ↓
+Credentials
+ ↓
+MySQL login
+ ↓
+show databases;
+ ↓
+use <database>;
+ ↓
+show tables;
+ ↓
+describe <table>;
+ ↓
+SELECT interesting data
+
+### `htb-lab.md`
+
+```markdown
+# HTB MySQL Enumeration Lab
+
+## Target
+
+```text
+10.129.182.69
+Question 1 — MySQL Version
+
+Command:
+
+sudo nmap -sV -p3306 --script mysql-info 10.129.182.69
+
+Result:
+
+MySQL 8.0.27-0ubuntu0.20.04.1
+
+HTB answer format:
+
+MySQL 8.0.27
+Question 2 — Customer Email
+
+Credentials provided by the lab:
+
+robin:robin
+
+Initial connection produced a TLS error:
+
+ERROR 2026 (HY000): TLS/SSL error:
+self-signed certificate in certificate chain
+
+The MySQL client did not support the --ssl-mode option, so the legacy option was used:
+
+mysql -u robin -probin -h 10.129.182.69 --skip-ssl
+
+Successful login:
+
+Welcome to the MariaDB monitor.
+Server version: 8.0.27-0ubuntu0.20.04.1
+
+Enumerate databases:
+
+show databases;
+
+Found:
+
+customers
+information_schema
+mysql
+performance_schema
+sys
+
+Select the customer database:
+
+use customers;
+
+List tables:
+
+show tables;
+
+Found:
+
+myTable
+
+Inspect columns:
+
+show columns from myTable;
+
+Relevant columns:
+
+id
+name
+email
+country
+postalZip
+city
+address
+pan
+cvv
+
+Search for Otto Lang:
+
+select email from myTable where name = 'Otto Lang';
+
+The returned email value is the answer to Question 2.
+
+Key Lessons
+MySQL normally runs on TCP/3306.
+Use Nmap for version and NSE enumeration.
+Don't blindly trust automated MySQL NSE results.
+Credentials discovered during earlier enumeration should be tested against MySQL when authorized.
+TLS certificate problems do not necessarily mean the credentials are invalid.
+--skip-ssl can be useful in a lab when the client rejects a self-signed certificate.
+After authentication, enumerate:
+Databases
+Tables
+Columns
+Records
+information_schema, mysql, and sys are important databases to recognize.
+Customer/application databases often contain valuable information.
+Core Workflow
+3306
+ ↓
+Nmap
+ ↓
+Version
+ ↓
+Credentials
+ ↓
+Login
+ ↓
+Databases
+ ↓
+Tables
+ ↓
+Columns
+ ↓
+Interesting Records

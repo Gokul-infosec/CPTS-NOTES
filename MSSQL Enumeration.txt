@@ -1,0 +1,429 @@
+MSSQL Enumeration — HTB Academy
+
+Practical notes for enumerating and interacting with Microsoft SQL Server (MSSQL) during authorized penetration-testing labs.
+
+---
+
+# MSSQL Enumeration
+
+## Overview
+
+Microsoft SQL Server (MSSQL) is a relational database management system developed by Microsoft.
+
+It is commonly found in Windows environments and integrates closely with Windows authentication and the .NET ecosystem.
+
+MSSQL can expose valuable information during penetration testing, including:
+
+- Server hostname
+- MSSQL instance name
+- SQL Server version
+- Database names
+- Authentication methods
+- Named pipes
+- Database contents
+- Potentially dangerous configurations
+
+---
+
+# Default Port
+
+| Port | Protocol | Service |
+|------|----------|---------|
+| 1433/TCP | TCP | Microsoft SQL Server |
+
+The default MSSQL TCP port is:
+
+```text
+1433
+MSSQL Components
+
+Common MSSQL clients/tools include:
+
+SQL Server Management Studio (SSMS)
+mssql-cli
+PowerShell
+HeidiSQL
+SQLPro
+Impacket mssqlclient.py
+
+On Kali/Parrot:
+
+locate mssqlclient
+
+Typical locations:
+
+/usr/bin/impacket-mssqlclient
+/usr/share/doc/python3-impacket/examples/mssqlclient.py
+Enumeration Methodology
+
+Use the following workflow:
+
+Discover
+   ↓
+Identify MSSQL
+   ↓
+Enumerate Version
+   ↓
+Enumerate Instance / Hostname
+   ↓
+Identify Authentication
+   ↓
+Test Authorized Credentials
+   ↓
+Connect
+   ↓
+Enumerate Databases
+   ↓
+Enumerate Tables / Data
+   ↓
+Identify Attack Paths
+Nmap Enumeration
+Basic MSSQL Scan
+sudo nmap -sV -p1433 <TARGET>
+MSSQL Information Enumeration
+sudo nmap -sV -p1433 --script ms-sql-info <TARGET>
+
+This can reveal:
+
+MSSQL version
+Instance name
+TCP port
+Named pipe
+Cluster information
+
+Example:
+
+1433/tcp open ms-sql-s Microsoft SQL Server 2019
+MSSQL NTLM Information
+
+The ms-sql-ntlm-info NSE script can reveal Windows/NetBIOS information.
+
+sudo nmap -p1433 --script ms-sql-ntlm-info <TARGET>
+
+Useful information may include:
+
+Target_Name
+NetBIOS_Domain_Name
+NetBIOS_Computer_Name
+DNS_Domain_Name
+DNS_Computer_Name
+Product_Version
+
+Example:
+
+Target_Name: ILF-SQL-01
+NetBIOS_Domain_Name: ILF-SQL-01
+NetBIOS_Computer_Name: ILF-SQL-01
+DNS_Domain_Name: ILF-SQL-01
+DNS_Computer_Name: ILF-SQL-01
+
+Therefore:
+
+Hostname = ILF-SQL-01
+Useful MSSQL NSE Scripts
+
+Nmap provides several MSSQL-specific scripts.
+
+ls /usr/share/nmap/scripts/ms-sql*
+
+Important scripts include:
+
+ms-sql-info
+ms-sql-empty-password
+ms-sql-xp-cmdshell
+ms-sql-config
+ms-sql-ntlm-info
+ms-sql-tables
+ms-sql-hasdbaccess
+ms-sql-dac
+ms-sql-dump-hashes
+
+Examples:
+
+sudo nmap -p1433 --script ms-sql-info <TARGET>
+sudo nmap -p1433 --script ms-sql-ntlm-info <TARGET>
+sudo nmap -p1433 --script ms-sql-config <TARGET>
+
+Use potentially intrusive scripts only when explicitly authorized by the lab/scope.
+
+Metasploit MSSQL Discovery
+
+Metasploit includes an MSSQL discovery module:
+
+auxiliary/scanner/mssql/mssql_ping
+
+Example:
+
+msfconsole
+
+Then:
+
+use auxiliary/scanner/mssql/mssql_ping
+set RHOSTS <TARGET>
+run
+
+This can help identify MSSQL instances and configuration details.
+
+MSSQL Authentication
+
+MSSQL can use different authentication mechanisms.
+
+One important distinction is between:
+
+SQL Authentication
+
+and
+
+Windows Authentication
+
+When connecting to an authorized lab, make sure the authentication method matches the account provided.
+
+Impacket MSSQL Client
+
+Impacket provides:
+
+mssqlclient.py
+
+On Kali/Parrot it can usually be invoked as:
+
+impacket-mssqlclient
+Windows Authentication
+
+For Windows authentication:
+
+impacket-mssqlclient <USER>@<TARGET> -windows-auth
+
+Example:
+
+impacket-mssqlclient backdoor@10.129.46.81 -windows-auth
+
+The client will prompt for the password.
+
+HTB Lab
+Target
+10.129.46.81
+Question 1 — Enumerate MSSQL Hostname
+
+Initial scan:
+
+sudo nmap -sV -p1433 --script ms-sql-info 10.129.46.81
+
+Result:
+
+1433/tcp open ms-sql-s Microsoft SQL Server 2019
+
+To obtain the hostname:
+
+sudo nmap -sV -p1433 --script ms-sql-info,ms-sql-ntlm-info 10.129.46.81
+
+Relevant output:
+
+Target_Name: ILF-SQL-01
+NetBIOS_Domain_Name: ILF-SQL-01
+NetBIOS_Computer_Name: ILF-SQL-01
+DNS_Domain_Name: ILF-SQL-01
+DNS_Computer_Name: ILF-SQL-01
+Answer
+ILF-SQL-01
+MSSQL Version
+
+The scan identified:
+
+Microsoft SQL Server 2019
+15.00.2000.00
+
+Therefore:
+
+Microsoft SQL Server 2019 RTM
+Question 2 — Connect to MSSQL
+
+The lab provided:
+
+Username: backdoor
+Password: Password1
+
+The initial connection without Windows authentication failed:
+
+impacket-mssqlclient backdoor:Password1@10.129.46.81
+
+Error:
+
+Login failed for user 'backdoor'.
+
+The correct authentication method was Windows authentication.
+
+Connect using:
+
+impacket-mssqlclient backdoor@10.129.46.81 -windows-auth
+
+Enter:
+
+Password1
+
+Successful connection:
+
+SQL (ILF-SQL-01\backdoor dbo@master)>
+Enumerating Databases
+
+Once connected, enumerate databases with:
+
+SELECT name FROM sys.databases;
+
+Lab output:
+
+master
+tempdb
+model
+msdb
+Employees
+
+The standard/default databases are:
+
+master
+tempdb
+model
+msdb
+
+The non-default database is:
+
+Employees
+Answer
+Employees
+Useful MSSQL SQL Commands
+List Databases
+SELECT name FROM sys.databases;
+Switch Database
+USE <DATABASE>;
+
+Example:
+
+USE Employees;
+List Tables
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES;
+List Columns
+SELECT COLUMN_NAME
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = '<TABLE>';
+Query Data
+SELECT * FROM <TABLE>;
+Default MSSQL Databases
+
+MSSQL commonly contains:
+
+master
+model
+msdb
+tempdb
+master
+
+Contains system-level information and server configuration metadata.
+
+model
+
+Template database used when creating new databases.
+
+msdb
+
+Used by SQL Server Agent and other SQL Server components.
+
+tempdb
+
+Temporary workspace used by SQL Server.
+
+When performing enumeration, identify databases outside the normal default set.
+
+Configuration & Security Considerations
+
+Important MSSQL security considerations include:
+
+Weak credentials
+Default or predictable passwords
+SQL authentication exposure
+Windows authentication configuration
+Unencrypted client connections
+Self-signed certificates
+Named pipes
+Excessive database permissions
+Dangerous extended procedures
+Misconfigured xp_cmdshell
+Excessive privileges for database accounts
+Practical Enumeration Checklist
+[ ] Check TCP 1433
+[ ] Identify MSSQL version
+[ ] Identify instance name
+[ ] Enumerate hostname
+[ ] Enumerate NTLM information
+[ ] Identify authentication method
+[ ] Test provided credentials
+[ ] Connect using appropriate authentication
+[ ] Enumerate databases
+[ ] Identify non-default databases
+[ ] Enumerate tables
+[ ] Enumerate columns
+[ ] Review accessible data
+[ ] Identify privilege/attack paths
+CPTS Mindset
+
+Do not immediately jump to exploitation.
+
+Follow the chain:
+
+1433 Open
+    ↓
+MSSQL Detected
+    ↓
+Version
+    ↓
+Instance
+    ↓
+Hostname
+    ↓
+Authentication
+    ↓
+Credentials
+    ↓
+Database Enumeration
+    ↓
+Tables
+    ↓
+Data
+    ↓
+Attack Path
+
+The key lesson from this lab was the difference between SQL authentication and Windows authentication.
+
+The credentials were valid, but the connection initially failed because the correct authentication method had not been specified.
+
+Quick Cheat Sheet
+Scan
+sudo nmap -sV -p1433 <TARGET>
+MSSQL Information
+sudo nmap -sV -p1433 --script ms-sql-info <TARGET>
+NTLM / Hostname
+sudo nmap -p1433 --script ms-sql-ntlm-info <TARGET>
+Combined
+sudo nmap -sV -p1433 --script ms-sql-info,ms-sql-ntlm-info <TARGET>
+Windows Authentication
+impacket-mssqlclient <USER>@<TARGET> -windows-auth
+List Databases
+SELECT name FROM sys.databases;
+Use Database
+USE <DATABASE>;
+List Tables
+SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;
+Query Table
+SELECT * FROM <TABLE>;
+HTB Answers
+Question	Answer
+MSSQL Hostname	ILF-SQL-01
+Non-default Database	Employees
+Key Takeaways
+MSSQL commonly uses TCP 1433.
+ms-sql-info identifies MSSQL version and instance information.
+ms-sql-ntlm-info can reveal Windows/NetBIOS hostname information.
+MSSQL authentication method matters.
+Impacket mssqlclient.py is extremely useful for MSSQL enumeration.
+SELECT name FROM sys.databases; quickly identifies accessible databases.
+Always distinguish default databases from custom databases.
+Enumeration should build an attack-path picture rather than relying on a single scan.

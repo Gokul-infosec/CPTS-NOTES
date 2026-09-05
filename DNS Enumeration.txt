@@ -1,0 +1,407 @@
+DNS Enumeration
+
+## Overview
+
+DNS (Domain Name System) resolves domain names to IP addresses and provides information about hosts, mail servers, name servers, and other infrastructure.
+
+During penetration testing, DNS enumeration can reveal:
+
+- Subdomains
+- Hostnames
+- IP addresses
+- Name servers
+- Mail servers
+- TXT records
+- Internal infrastructure
+- DNS server information
+- Misconfigured zone transfers
+- Additional attack surface
+
+---
+
+## DNS Record Types
+
+| Record | Description |
+|---|---|
+| `A` | Maps hostname to IPv4 address |
+| `AAAA` | Maps hostname to IPv6 address |
+| `MX` | Mail server |
+| `NS` | Name server |
+| `TXT` | Text information, SPF, verification, etc. |
+| `CNAME` | Alias for another hostname |
+| `PTR` | Reverse DNS: IP to hostname |
+| `SOA` | Start of Authority; zone information |
+
+---
+
+# DNS Enumeration Methodology
+
+```text
+Identify DNS Server
+        ↓
+Enumerate NS / A / MX / TXT / SOA
+        ↓
+Check DNS Version
+        ↓
+Attempt Zone Transfer (AXFR)
+        ↓
+Extract Discovered Subdomains
+        ↓
+Treat Interesting Subdomains as Potential Zones
+        ↓
+Attempt AXFR Against Discovered Zones
+        ↓
+Brute-Force Subdomains
+        ↓
+Try Multiple Wordlists
+        ↓
+Resolve Discovered Hosts
+        ↓
+Build Complete Attack Surface
+Basic dig Commands
+NS Record
+
+Find the authoritative name server:
+
+dig ns inlanefreight.htb @<DNS_IP>
+
+Example:
+
+dig ns inlanefreight.htb @10.129.42.195
+A Record
+
+Find the IPv4 address:
+
+dig a inlanefreight.htb @<DNS_IP>
+MX Record
+
+Find mail servers:
+
+dig mx inlanefreight.htb @<DNS_IP>
+TXT Record
+
+Retrieve TXT records:
+
+dig txt inlanefreight.htb @<DNS_IP>
+
+TXT records may contain:
+
+SPF information
+Domain verification
+Third-party services
+Other useful information
+SOA Record
+
+Retrieve Start of Authority information:
+
+dig soa inlanefreight.htb @<DNS_IP>
+ANY Query
+
+Query multiple available record types:
+
+dig any inlanefreight.htb @<DNS_IP>
+
+ANY does not necessarily return every DNS record.
+
+DNS Server Version
+
+For BIND servers, try:
+
+dig CH TXT version.bind @<DNS_IP>
+
+Example:
+
+dig CH TXT version.bind @10.129.42.195
+Zone Transfer - AXFR
+
+AXFR is used to transfer DNS zone information between authoritative DNS servers.
+
+A misconfigured DNS server may allow unauthorized clients to retrieve the entire zone.
+
+dig axfr <DOMAIN> @<DNS_IP>
+
+Example:
+
+dig axfr inlanefreight.htb @10.129.42.195
+
+A successful AXFR can expose:
+
+Hostnames
+IP addresses
+Internal systems
+Mail servers
+Development systems
+Internal DNS zones
+Additional attack surface
+Important Enumeration Technique
+
+Do not stop after the first AXFR.
+
+Suppose:
+
+dig axfr inlanefreight.htb @10.129.42.195
+
+reveals:
+
+app.inlanefreight.htb
+dev.inlanefreight.htb
+internal.inlanefreight.htb
+
+Treat these as additional enumeration targets.
+
+Try:
+
+dig axfr app.inlanefreight.htb @10.129.42.195
+dig axfr dev.inlanefreight.htb @10.129.42.195
+dig axfr internal.inlanefreight.htb @10.129.42.195
+
+A discovered subdomain may represent a separate DNS zone.
+
+Subdomain Enumeration with dnsenum
+
+Basic enumeration:
+
+dnsenum --dnsserver <DNS_IP> --enum <DOMAIN>
+
+Using a wordlist:
+
+dnsenum --dnsserver <DNS_IP> \
+--enum \
+-f /usr/share/seclists/Discovery/DNS/<WORDLIST> \
+<DOMAIN>
+
+More detailed enumeration:
+
+dnsenum --dnsserver <DNS_IP> \
+--enum -p 0 -s 0 \
+-o subdomains.txt \
+-f /usr/share/seclists/Discovery/DNS/fierce-hostlist.txt \
+--threads 90 \
+<DOMAIN>
+DNS Wordlists
+
+Available SecLists DNS wordlists:
+
+ls /usr/share/seclists/Discovery/DNS/
+
+Useful wordlists include:
+
+subdomains-top1million-5000.txt
+subdomains-top1million-20000.txt
+subdomains-top1million-110000.txt
+fierce-hostlist.txt
+namelist.txt
+combined_subdomains.txt
+Important
+
+Do not rely on a single wordlist.
+
+Different wordlists can discover different hosts.
+
+Enumerating a Discovered Zone
+
+If the main zone reveals:
+
+dev.inlanefreight.htb
+
+enumerate the dev zone separately:
+
+dnsenum --dnsserver <DNS_IP> \
+--enum -p 0 -s 0 \
+-o subdomains.txt \
+-f /usr/share/seclists/Discovery/DNS/fierce-hostlist.txt \
+--threads 90 \
+dev.inlanefreight.htb
+
+This searches for:
+
+*.dev.inlanefreight.htb
+
+The same concept applies to other discovered zones.
+
+host Command
+
+Basic lookup:
+
+host <DOMAIN>
+
+Using a specific DNS server:
+
+host <DOMAIN> <DNS_IP>
+
+Example:
+
+host app.inlanefreight.htb 10.129.42.195
+Reverse DNS
+
+Perform a reverse lookup:
+
+dig -x <IP> @<DNS_IP>
+
+Example:
+
+dig -x 10.129.34.16 @10.129.42.195
+
+A reverse lookup may return NXDOMAIN if no PTR record exists.
+
+HTB DNS Lab
+
+Target:
+
+10.129.42.195
+Q1 - Name Server
+
+Command:
+
+dig ns inlanefreight.htb @10.129.42.195
+
+Result:
+
+ns.inlanefreight.htb
+
+Answer:
+
+ns.inlanefreight.htb
+Main Zone AXFR
+
+Command:
+
+dig axfr inlanefreight.htb @10.129.42.195
+
+Discovered hosts:
+
+app.inlanefreight.htb       → 10.129.18.15
+dev.inlanefreight.htb       → 10.12.0.1
+internal.inlanefreight.htb  → 10.129.1.6
+mail1.inlanefreight.htb     → 10.129.18.201
+
+Important discovery:
+
+internal.inlanefreight.htb
+Internal Zone AXFR
+
+Command:
+
+dig axfr internal.inlanefreight.htb @10.129.42.195
+
+Discovered hosts:
+
+dc1.internal.inlanefreight.htb    → 10.129.34.16
+dc2.internal.inlanefreight.htb    → 10.129.34.11
+mail1.internal.inlanefreight.htb  → 10.129.18.200
+vpn.internal.inlanefreight.htb    → 10.129.1.6
+ws1.internal.inlanefreight.htb    → 10.129.1.34
+ws2.internal.inlanefreight.htb    → 10.129.1.35
+wsus.internal.inlanefreight.htb   → 10.129.18.2
+
+The zone transfer also exposed the TXT record:
+
+HTB{DN5_z0N3_7r4N5F3r_iskdufhcnlu34}
+Enumerating the dev Zone
+
+The .203 host was not visible in the initial AXFR.
+
+The dev zone was enumerated separately using dnsenum and fierce-hostlist.txt:
+
+dnsenum --dnsserver 10.129.42.195 \
+--enum -p 0 -s 0 \
+-o subdomains.txt \
+-f /usr/share/seclists/Discovery/DNS/fierce-hostlist.txt \
+--threads 90 \
+dev.inlanefreight.htb
+
+Results:
+
+dev1.dev.inlanefreight.htb       → 10.12.3.6
+ns.dev.inlanefreight.htb         → 127.0.0.1
+win2k.dev.inlanefreight.htb      → 10.12.3.203
+
+Therefore:
+
+FQDN: win2k.dev.inlanefreight.htb
+IP:   10.12.3.203
+DNS Enumeration Checklist
+[ ] Identify DNS server
+[ ] Enumerate NS records
+[ ] Enumerate A / AAAA records
+[ ] Enumerate MX records
+[ ] Enumerate TXT records
+[ ] Enumerate SOA records
+[ ] Check CNAME records
+[ ] Check ANY query
+[ ] Check version.bind
+[ ] Attempt AXFR
+[ ] Extract discovered subdomains
+[ ] Identify interesting subdomains
+[ ] Attempt AXFR against discovered zones
+[ ] Brute-force subdomains
+[ ] Try multiple wordlists
+[ ] Resolve discovered hosts
+[ ] Look for internal IP addresses
+[ ] Look for development/staging systems
+[ ] Look for mail infrastructure
+[ ] Look for unusual hosts
+Quick DNS Cheat Sheet
+# NS
+dig ns domain.com @DNS_IP
+
+# A
+dig a domain.com @DNS_IP
+
+# MX
+dig mx domain.com @DNS_IP
+
+# TXT
+dig txt domain.com @DNS_IP
+
+# SOA
+dig soa domain.com @DNS_IP
+
+# ANY
+dig any domain.com @DNS_IP
+
+# DNS version
+dig CH TXT version.bind @DNS_IP
+
+# Zone transfer
+dig axfr domain.com @DNS_IP
+
+# Reverse lookup
+dig -x IP @DNS_IP
+
+# Basic dnsenum
+dnsenum --dnsserver DNS_IP --enum domain.com
+
+# dnsenum with wordlist
+dnsenum --dnsserver DNS_IP --enum \
+-f /usr/share/seclists/Discovery/DNS/fierce-hostlist.txt \
+domain.com
+
+# Enumerate a discovered zone
+dnsenum --dnsserver DNS_IP \
+--enum -p 0 -s 0 \
+-o subdomains.txt \
+-f /usr/share/seclists/Discovery/DNS/fierce-hostlist.txt \
+--threads 90 \
+dev.domain.com
+Key Takeaways
+DNS is an important source of attack-surface information.
+Always attempt AXFR when appropriate.
+A successful AXFR can expose internal infrastructure.
+Treat discovered subdomains as additional enumeration targets.
+A subdomain can be a separate DNS zone.
+Do not rely on one wordlist.
+Different wordlists can reveal different hosts.
+Always correlate hostnames with their IP addresses.
+Enumeration is iterative:
+DISCOVER
+   ↓
+IDENTIFY
+   ↓
+ENUMERATE
+   ↓
+CORRELATE
+   ↓
+ENUMERATE AGAIN
+   ↓
+BUILD ATTACK SURFACE

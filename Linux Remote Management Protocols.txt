@@ -1,0 +1,657 @@
+Linux Remote Management Protocols — HTB Academy
+
+Practical enumeration notes for Linux remote-management services.
+
+Covered:
+
+- SSH
+- Rsync
+- R-Services
+
+---
+
+# SSH
+
+## Overview
+
+SSH (Secure Shell) provides an encrypted connection between two systems over an insecure network.
+
+Default port:
+
+```text
+TCP/22
+
+SSH can be used for:
+
+Remote command execution
+Remote administration
+File transfers
+Port forwarding
+
+SSH-2 is the modern and more secure protocol version.
+
+SSH Authentication Methods
+
+OpenSSH supports six authentication methods:
+
+1. Password authentication
+2. Public-key authentication
+3. Host-based authentication
+4. Keyboard-interactive authentication
+5. Challenge-response authentication
+6. GSSAPI authentication
+SSH Public-Key Authentication
+
+SSH public-key authentication uses a key pair:
+
+Private Key
+    +
+Public Key
+
+The private key remains on the client and should remain secret.
+
+The server stores the corresponding public key.
+
+Important files:
+
+~/.ssh/id_rsa
+~/.ssh/id_rsa.pub
+~/.ssh/authorized_keys
+
+The private key can also be protected with a passphrase.
+
+SSH Configuration
+
+OpenSSH server configuration:
+
+/etc/ssh/sshd_config
+
+View active configuration:
+
+cat /etc/ssh/sshd_config | grep -v "#" | sed -r '/^\s*$/d'
+
+Example:
+
+Include /etc/ssh/sshd_config.d/*.conf
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding yes
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server
+Dangerous SSH Settings
+Setting	Description / Risk
+PasswordAuthentication yes	Allows password-based authentication
+PermitEmptyPasswords yes	Allows empty passwords
+PermitRootLogin yes	Allows direct root login
+Protocol 1	Uses outdated SSH protocol
+X11Forwarding yes	Allows X11 forwarding
+AllowTcpForwarding yes	Allows TCP forwarding
+PermitTunnel	Allows tunneling
+DebianBanner yes	Displays a specific banner
+
+Password authentication can make known usernames susceptible to password guessing.
+
+SSH Footprinting
+Nmap
+sudo nmap -sV -p22 <TARGET>
+
+Example:
+
+22/tcp open ssh OpenSSH 8.2p1 Ubuntu
+
+The SSH banner can reveal:
+
+Protocol version
+OpenSSH version
+Operating system/distribution
+SSH Verbose Enumeration
+
+Use:
+
+ssh -v <USER>@<TARGET>
+
+Example:
+
+ssh -v cry0l1t3@10.129.14.132
+
+Look for:
+
+Authentications that can continue:
+publickey,password,keyboard-interactive
+
+This reveals available authentication methods.
+
+Force Password Authentication
+ssh -v <USER>@<TARGET> \
+-o PreferredAuthentications=password
+
+Example:
+
+ssh -v cry0l1t3@10.129.14.132 \
+-o PreferredAuthentications=password
+
+Useful when testing which authentication method the server accepts.
+
+SSH-Audit
+
+ssh-audit can inspect SSH client/server configuration and cryptographic algorithms.
+
+Clone:
+
+git clone https://github.com/jtesta/ssh-audit.git
+cd ssh-audit
+
+Run:
+
+./ssh-audit.py <TARGET>
+
+Example:
+
+./ssh-audit.py 10.129.14.132
+
+It can show:
+
+SSH banner
+Software version
+Key exchange algorithms
+Host-key algorithms
+Encryption algorithms
+MAC algorithms
+Compression
+Security warnings
+SSH Banner
+
+Typical SSH banner:
+
+SSH-2.0-OpenSSH_8.2p1
+
+Meaning:
+
+Protocol = SSH-2
+Software = OpenSSH
+Version = 8.2p1
+
+An older banner such as:
+
+SSH-1.99-OpenSSH_3.9p1
+
+indicates compatibility with older SSH protocol versions.
+
+SSH Enumeration Workflow
+TCP/22
+   ↓
+SSH detected
+   ↓
+Version / Banner
+   ↓
+Authentication Methods
+   ↓
+Configuration
+   ↓
+Users / Credentials
+   ↓
+SSH Keys
+   ↓
+Authorized Access
+Rsync
+Overview
+
+Rsync is a fast file synchronization and transfer utility.
+
+Common uses:
+
+Backups
+Mirroring
+File synchronization
+Remote file transfers
+
+Rsync uses a delta-transfer algorithm that reduces the amount of data transmitted when files already exist on the destination.
+
+Default port:
+
+TCP/873
+
+Rsync can also operate over SSH.
+
+Rsync Enumeration
+Nmap
+sudo nmap -sV -p873 <TARGET>
+
+Example:
+
+873/tcp open rsync
+(protocol version 31)
+Rsync Banner
+
+Connect manually:
+
+nc -nv <TARGET> 873
+
+Example:
+
+@RSYNCD: 31.0
+
+Try:
+
+#list
+
+This may reveal available modules/shares.
+
+Example:
+
+dev             Dev Tools
+Enumerate Rsync Share
+
+List files without downloading:
+
+rsync -av --list-only rsync://<TARGET>/<SHARE>
+
+Example:
+
+rsync -av --list-only rsync://127.0.0.1/dev
+
+Example output:
+
+drwxr-xr-x             48 2022/09/19 09:43:10 .
+-rw-r--r--              0 2022/09/19 09:34:50 build.sh
+-rw-r--r--              0 2022/09/19 09:36:02 secrets.yaml
+drwx------             54 2022/09/19 09:43:10 .ssh
+
+Interesting files can include:
+
+build.sh
+secrets.yaml
+.ssh/
+Download Accessible Files
+
+If authorized:
+
+rsync -av rsync://<TARGET>/<SHARE>
+
+Example:
+
+rsync -av rsync://127.0.0.1/dev
+
+Then inspect downloaded files for:
+
+Credentials
+Configuration
+SSH keys
+Secrets
+Scripts
+Rsync Over SSH
+
+If Rsync is configured to use SSH:
+
+rsync -av -e ssh <SOURCE> <DESTINATION>
+
+For a non-standard SSH port:
+
+rsync -av -e "ssh -p2222" <SOURCE> <DESTINATION>
+Rsync Enumeration Workflow
+TCP/873
+   ↓
+Rsync detected
+   ↓
+Protocol Version
+   ↓
+Enumerate Modules
+   ↓
+Enumerate Files
+   ↓
+Download Accessible Files
+   ↓
+Search for Secrets
+   ↓
+Credential Reuse
+R-Services
+Overview
+
+R-Services are a collection of older Unix remote-access services.
+
+They were commonly used for:
+
+Remote login
+Remote command execution
+File copying
+User/session information
+
+SSH eventually replaced R-Services because of their inherent security weaknesses.
+
+R-Services transmit information without modern encryption.
+
+R-Service Ports
+512/TCP → rexec
+513/TCP → rlogin
+514/TCP → rsh / rcp
+R-Commands
+
+Important commands:
+
+rcp
+rexec
+rlogin
+rsh
+rstat
+ruptime
+rwho
+rusers
+R-Service Table
+Command	Daemon	Port	Function
+rcp	rshd	514	Remote file copy
+rsh	rshd	514	Remote shell
+rexec	rexecd	512	Remote command execution
+rlogin	rlogind	513	Remote login
+Rlogin
+
+rlogin provides remote login to Unix-like systems.
+
+Example:
+
+rlogin <TARGET> -l <USERNAME>
+
+Example:
+
+rlogin 10.0.17.2 -l htb-student
+Trusted Hosts
+
+R-Services can rely on trusted-host configuration files:
+
+/etc/hosts.equiv
+
+and:
+
+~/.rhosts
+
+These files can specify trusted hosts and users.
+
+/etc/hosts.equiv
+
+Global trusted-host configuration:
+
+cat /etc/hosts.equiv
+
+Example:
+
+# <hostname> <local username>
+pwnbox cry0l1t3
+.rhosts
+
+Per-user trusted-host configuration:
+
+cat ~/.rhosts
+
+Example:
+
+htb-student     10.0.17.5
++               10.0.17.10
++               +
+
+Syntax can be:
+
+<username> <IP>
+
+or:
+
+<username> <hostname>
+Dangerous R-Service Trust
+
+The + wildcard can create dangerous trust relationships.
+
+Example:
+
++ +
+
+Depending on configuration, this can effectively trust any user from any host.
+
+Misconfigured trust files may allow access without normal password authentication.
+
+R-Service Enumeration
+
+Scan the main ports:
+
+sudo nmap -sV -p512,513,514 <TARGET>
+
+Example:
+
+512/tcp open exec?
+513/tcp open login?
+514/tcp open tcpwrapped
+Rwho
+
+rwho can list interactive users on the local network.
+
+rwho
+
+Example:
+
+root            web01:pts/0       Dec 2 21:34
+htb-student     workstn01:tty1   Dec 2 19:57
+
+Useful information:
+
+Username
+Hostname
+TTY
+Login time
+Session duration
+
+This can help identify potential usernames and active systems.
+
+Rusers
+
+rusers provides more detailed information about logged-in users.
+
+rusers -al <TARGET>
+
+Example:
+
+htb-student 10.0.17.5:console Dec 2 19:57 2:25
+
+Can reveal:
+
+Username
+Host
+TTY
+Login date/time
+Idle time
+Remote host
+R-Service Attack Path
+512/513/514
+      ↓
+Identify R-Service
+      ↓
+Check hosts.equiv
+      ↓
+Check .rhosts
+      ↓
+Identify Trusted Hosts/Users
+      ↓
+Look for Dangerous Wildcards
+      ↓
+Test Authorized Access
+      ↓
+Remote Login / Command Execution
+Credential Reuse
+
+Remote-management services should be checked against credentials discovered elsewhere in an authorized assessment.
+
+Example:
+
+SMTP
+ ↓
+Credentials discovered
+ ↓
+SSH
+ ↓
+Authentication testing
+
+Another example:
+
+Rsync
+ ↓
+secrets.yaml
+ ↓
+Credentials discovered
+ ↓
+SSH
+ ↓
+Authentication testing
+
+Always keep credential testing within the authorized scope.
+
+Enumeration Methodology
+
+When discovering a remote-management service:
+
+1. Discover the port
+2. Identify the protocol
+3. Identify the version
+4. Enumerate authentication
+5. Check configuration
+6. Check weak/default credentials
+7. Check credential reuse
+8. Enumerate accessible files/shares
+9. Check trusted relationships
+10. Determine possible attack paths
+Quick Cheat Sheet
+SSH
+sudo nmap -sV -p22 <TARGET>
+ssh -v <USER>@<TARGET>
+ssh -v <USER>@<TARGET> \
+-o PreferredAuthentications=password
+./ssh-audit.py <TARGET>
+
+Configuration:
+
+/etc/ssh/sshd_config
+Rsync
+sudo nmap -sV -p873 <TARGET>
+nc -nv <TARGET> 873
+
+Then:
+
+#list
+
+List files:
+
+rsync -av --list-only rsync://<TARGET>/<SHARE>
+
+Download:
+
+rsync -av rsync://<TARGET>/<SHARE>
+
+Rsync over SSH:
+
+rsync -av -e ssh <SOURCE> <DESTINATION>
+R-Services
+sudo nmap -sV -p512,513,514 <TARGET>
+rlogin <TARGET> -l <USER>
+rwho
+rusers -al <TARGET>
+
+Trusted-host files:
+
+/etc/hosts.equiv
+~/.rhosts
+Ports
+Service	Port	Transport
+SSH	22	TCP
+Rsync	873	TCP
+rexec	512	TCP
+rlogin	513	TCP
+rsh / rcp	514	TCP
+CPTS Enumeration Mindset
+
+Don't stop at:
+
+22/tcp open ssh
+
+Think:
+
+Port
+ ↓
+Protocol
+ ↓
+Version
+ ↓
+Authentication
+ ↓
+Configuration
+ ↓
+Credentials / Keys
+ ↓
+Access
+ ↓
+Impact
+
+For Rsync:
+
+873
+ ↓
+Rsync
+ ↓
+Protocol Version
+ ↓
+Modules
+ ↓
+Files
+ ↓
+Secrets
+ ↓
+Credentials / Keys
+
+For R-Services:
+
+512/513/514
+ ↓
+R-Service
+ ↓
+Trusted Relationships
+ ↓
+hosts.equiv / .rhosts
+ ↓
+Users
+ ↓
+Trust Misconfiguration
+ ↓
+Remote Access
+Key Takeaways
+SSH commonly uses TCP/22 and provides encrypted remote administration.
+SSH-2 is the modern SSH protocol.
+SSH supports password, public-key, host-based, keyboard-interactive, challenge-response, and GSSAPI authentication.
+sshd_config contains important server-side settings.
+ssh -v reveals authentication methods and connection details.
+ssh-audit can identify weak cryptographic algorithms and configuration issues.
+Rsync commonly uses TCP/873.
+Rsync modules can sometimes be enumerated without authentication.
+Accessible Rsync files should be inspected for sensitive information.
+R-Services use TCP/512, 513, and 514.
+R-Services lack the security provided by modern SSH.
+/etc/hosts.equiv provides global trusted-host configuration.
+~/.rhosts provides per-user trusted-host configuration.
+Misconfigured trust relationships can allow access without normal authentication.
+rwho and rusers can reveal logged-in users.
+Remote-management services should be included in enumeration.
+Credentials discovered elsewhere should be considered for authorized password-reuse testing.
+Final Enumeration Formula
+DISCOVER
+   ↓
+IDENTIFY
+   ↓
+VERSION
+   ↓
+AUTHENTICATION
+   ↓
+CONFIGURATION
+   ↓
+CREDENTIALS
+   ↓
+FILES / SHARES
+   ↓
+TRUST RELATIONSHIPS
+   ↓
+ACCESS
+   ↓
+ATTACK PATH
