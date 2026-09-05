@@ -1,0 +1,431 @@
+IPMI Enumeration — HTB Academy
+
+Practical notes for enumerating Intelligent Platform Management Interface (IPMI) during authorized penetration-testing labs.
+
+---
+
+# IPMI
+
+## Overview
+
+Intelligent Platform Management Interface (IPMI) is a standardized hardware-management interface used for remotely managing and monitoring servers.
+
+IPMI operates independently of:
+
+- BIOS
+- CPU
+- Operating System
+- Host firmware
+
+This allows administrators to manage systems even when the operating system is:
+
+- Not booted
+- Powered off
+- Unresponsive
+- Experiencing a system failure
+
+IPMI can be used for:
+
+- BIOS management
+- Remote console access
+- Server power control
+- Reboots
+- Hardware monitoring
+- Hardware inventory
+- Event log management
+- Remote OS installation/reinstallation
+
+---
+
+# IPMI Architecture
+
+Important components include:
+
+```text
+BMC
+ICMB
+IPMB
+IPMI Memory
+Communication Interfaces
+BMC
+
+The Baseboard Management Controller (BMC) is the primary hardware component responsible for IPMI functionality.
+
+BMCs are commonly embedded in server motherboards and often run a small Linux-based system.
+
+Common BMC implementations include:
+
+HP iLO
+Dell DRAC / iDRAC
+Supermicro IPMI
+
+Access to a BMC can provide extremely powerful hardware-level management capabilities.
+
+Default Port
+
+IPMI communicates over:
+
+UDP/623
+
+Service commonly appears as:
+
+asf-rmcp
+IPMI Enumeration Methodology
+
+Use this workflow:
+
+Discover UDP/623
+      ↓
+Identify IPMI
+      ↓
+Determine IPMI Version
+      ↓
+Identify BMC Vendor
+      ↓
+Check Default Credentials
+      ↓
+Check Authentication Configuration
+      ↓
+Test RAKP Hash Retrieval
+      ↓
+Offline Password Cracking
+      ↓
+BMC Access
+Nmap Enumeration
+Basic IPMI Version Scan
+sudo nmap -sU --script ipmi-version -p 623 <TARGET>
+
+Example:
+
+sudo nmap -sU --script ipmi-version -p 623 10.129.42.195
+
+Example output:
+
+PORT    STATE SERVICE
+623/udp open  asf-rmcp
+| ipmi-version:
+|   Version:
+|     IPMI-2.0
+|   UserAuth:
+|     auth_user, non_null_user
+|   PassAuth:
+|     ...
+|   Level:
+|     2.0
+
+The important findings are:
+
+623/UDP
+IPMI version
+Authentication information
+BMC vendor/MAC information
+Metasploit IPMI Version Enumeration
+
+Metasploit provides:
+
+auxiliary/scanner/ipmi/ipmi_version
+
+Start Metasploit:
+
+msfconsole
+
+Use the module:
+
+use auxiliary/scanner/ipmi/ipmi_version
+
+Set the target:
+
+set RHOSTS <TARGET>
+
+Run:
+
+run
+
+Example:
+
+[*] Sending IPMI requests to <TARGET>-><TARGET>
+[+] <TARGET>:623 - IPMI - IPMI-2.0 ...
+[*] Scanned 1 of 1 hosts
+BMC Identification
+
+Common BMC implementations:
+
+Vendor	Technology
+Dell	iDRAC
+HP	iLO
+Supermicro	IPMI
+
+BMCs may expose additional services such as:
+
+HTTP/HTTPS
+SSH
+Telnet
+UDP/623
+
+Therefore, once IPMI is discovered, perform broader service enumeration when authorized.
+
+Default Credentials
+
+The Academy highlights several commonly encountered defaults:
+
+Product	Username	Password
+Dell iDRAC	root	calvin
+HP iLO	Administrator	Randomized 8-character value
+Supermicro IPMI	ADMIN	ADMIN
+
+Always check the scope and authorization before attempting credentials.
+
+Default credentials can provide access to:
+
+Web management consoles
+Remote console
+SSH
+Telnet
+Power management
+Hardware configuration
+Dangerous IPMI 2.0 RAKP Behavior
+
+One of the most important IPMI security issues involves the RAKP authentication process.
+
+During IPMI 2.0 authentication, a server can provide a password-derived hash during the authentication exchange.
+
+This can allow an attacker to obtain a hash for a valid BMC user without knowing the password.
+
+The recovered hash can then be attacked offline.
+
+The Academy notes Hashcat mode:
+
+7300
+
+for IPMI hashes.
+
+Metasploit RAKP Hash Retrieval
+
+Metasploit provides:
+
+auxiliary/scanner/ipmi/ipmi_dumphashes
+
+Start Metasploit:
+
+msfconsole
+
+Use:
+
+use auxiliary/scanner/ipmi/ipmi_dumphashes
+
+Set the target:
+
+set RHOSTS <TARGET>
+
+Run:
+
+run
+
+The module can attempt to retrieve IPMI password hashes.
+
+Example result:
+
+[+] <TARGET>:623 - IPMI - Hash found:
+ADMIN:<HASH>
+
+The Academy example also demonstrates automatic cracking of a common password.
+
+Hashcat
+
+IPMI hashes can be attacked offline with Hashcat mode:
+
+7300
+
+Example dictionary attack:
+
+hashcat -m 7300 ipmi.txt <WORDLIST>
+
+For an HP iLO factory-default style password, the Academy demonstrates:
+
+hashcat -m 7300 ipmi.txt -a 3 ?1?1?1?1?1?1?1?1 -1 ?d?u
+
+This attempts eight-character combinations consisting of:
+
+digits + uppercase letters
+
+Only perform password cracking against hashes obtained from authorized targets.
+
+Metasploit Module Options
+
+For:
+
+auxiliary/scanner/ipmi/ipmi_dumphashes
+
+Useful options include:
+
+CRACK_COMMON
+OUTPUT_HASHCAT_FILE
+OUTPUT_JOHN_FILE
+PASS_FILE
+RHOSTS
+RPORT
+THREADS
+USER_FILE
+
+Default IPMI port:
+
+RPORT = 623
+Why IPMI Is High Risk
+
+BMC access can be close to equivalent to physical access to a server.
+
+Depending on the BMC implementation and privileges, an attacker may be able to:
+
+Power off server
+Restart server
+View remote console
+Modify BIOS
+Reinstall OS
+Access hardware logs
+Manage storage
+Configure hardware
+
+Therefore:
+
+IPMI exposure = HIGH VALUE TARGET
+IPMI Attack Path
+
+A typical assessment path can look like:
+
+UDP/623 discovered
+        ↓
+IPMI detected
+        ↓
+BMC identified
+        ↓
+Default credentials tested
+        ↓
+Credentials fail
+        ↓
+RAKP hash obtained
+        ↓
+Hash cracked offline
+        ↓
+BMC authentication
+        ↓
+Remote hardware management
+HTB IPMI Lab
+Questions
+Question 1
+What username is configured for accessing the host via IPMI?
+Question 2
+What is the account's cleartext password?
+
+The Academy lab contains two questions focused on discovering the configured IPMI username and then determining its cleartext password.
+
+Practical Enumeration Checklist
+[ ] Scan UDP/623
+[ ] Identify IPMI
+[ ] Identify IPMI version
+[ ] Identify BMC vendor
+[ ] Check exposed HTTP/HTTPS
+[ ] Check SSH/Telnet if authorized
+[ ] Check documented/default credentials
+[ ] Enumerate valid IPMI users where permitted
+[ ] Test RAKP hash retrieval
+[ ] Save hash in Hashcat format
+[ ] Crack hash offline
+[ ] Validate recovered credentials
+[ ] Document BMC exposure and impact
+Useful Commands
+Nmap
+sudo nmap -sU -p623 <TARGET>
+IPMI Version
+sudo nmap -sU --script ipmi-version -p623 <TARGET>
+Metasploit Version Scan
+use auxiliary/scanner/ipmi/ipmi_version
+set RHOSTS <TARGET>
+run
+RAKP Hash Retrieval
+use auxiliary/scanner/ipmi/ipmi_dumphashes
+set RHOSTS <TARGET>
+run
+Hashcat
+hashcat -m 7300 ipmi.txt <WORDLIST>
+CPTS Mindset
+
+Don't stop after finding:
+
+623/UDP open
+
+Continue:
+
+Port
+ ↓
+Protocol
+ ↓
+Version
+ ↓
+BMC
+ ↓
+Authentication
+ ↓
+Credentials
+ ↓
+Access
+ ↓
+Impact
+
+IPMI is particularly important because it operates below the normal operating-system layer.
+
+Key Takeaways
+IPMI is a hardware-level server management technology.
+The BMC operates independently from the host OS.
+IPMI commonly uses UDP/623.
+ipmi-version is a useful Nmap NSE script.
+Common BMC technologies include Dell iDRAC, HP iLO, and Supermicro IPMI.
+Default credentials should be checked when authorized.
+IPMI 2.0 RAKP authentication can expose password-derived hashes.
+IPMI hashes can be attacked offline with Hashcat mode 7300.
+BMC access can provide extremely powerful management capabilities.
+IPMI should be included in internal penetration-testing enumeration.
+Quick Cheat Sheet
+IPMI
+----
+Protocol: IPMI
+Port: UDP/623
+BMC: Baseboard Management Controller
+
+Nmap:
+sudo nmap -sU --script ipmi-version -p623 <TARGET>
+
+Metasploit:
+auxiliary/scanner/ipmi/ipmi_version
+
+RAKP Hash:
+auxiliary/scanner/ipmi/ipmi_dumphashes
+
+Hashcat:
+-m 7300
+
+Common Defaults:
+Dell iDRAC -> root:calvin
+Supermicro -> ADMIN:ADMIN
+HP iLO -> Administrator:<factory/randomized password>
+Enumeration Mindset
+DISCOVER
+   ↓
+UDP/623
+   ↓
+IDENTIFY
+   ↓
+IPMI / BMC
+   ↓
+ENUMERATE
+   ↓
+Version / Vendor / Auth
+   ↓
+AUTHENTICATE
+   ↓
+Default Credentials / RAKP
+   ↓
+CRACK OFFLINE
+   ↓
+VALIDATE
+   ↓
+ASSESS IMPACT

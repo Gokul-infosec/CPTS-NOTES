@@ -1,0 +1,381 @@
+SNMP Enumeration
+
+## What is SNMP?
+
+**SNMP (Simple Network Management Protocol)** is used to monitor and manage network devices and systems.
+
+It can expose information such as:
+
+- Hostname
+- Operating system
+- System description
+- Administrator/contact information
+- Network interfaces
+- Running processes
+- Installed software
+- Storage information
+- Custom scripts and their output
+- Device location
+- System uptime
+
+> ⚠️ SNMP can expose sensitive information when poorly configured.
+
+---
+
+# SNMP Versions
+
+| Version | Security |
+|---|---|
+| SNMPv1 | No authentication/encryption |
+| SNMPv2c | Community string, sent in plaintext |
+| SNMPv3 | Authentication + encryption support |
+
+### Community String
+
+A community string acts similar to a password for SNMPv1/v2c.
+
+Common default:
+
+```text
+public
+
+Another commonly encountered string:
+
+private
+Important SNMP Ports
+Port	Protocol	Purpose
+161/UDP	SNMP	Queries/commands
+162/UDP	SNMP Trap	Trap notifications
+MIB and OID
+MIB
+
+MIB (Management Information Base) is a hierarchical collection of objects that can be queried through SNMP.
+
+OID
+
+OID (Object Identifier) identifies a specific SNMP object.
+
+Example:
+
+.1.3.6.1.2.1.1.1.0
+
+This corresponds to the system description (sysDescr).
+
+SNMP Enumeration Methodology
+1. Discover UDP/161
+        ↓
+2. Identify SNMP
+        ↓
+3. Find/validate community string
+        ↓
+4. Run snmpwalk
+        ↓
+5. Enumerate important MIB branches
+        ↓
+6. Look for users, hostnames, OS, processes, software
+        ↓
+7. Check custom SNMP extensions/scripts
+        ↓
+8. Extract useful information
+1. Discover SNMP
+
+Scan UDP port 161:
+
+sudo nmap -sU -p161 <TARGET>
+
+Service/version detection:
+
+sudo nmap -sU -p161 -sV <TARGET>
+
+SNMP information using NSE:
+
+sudo nmap -sU -p161 --script=snmp-info <TARGET>
+
+Example:
+
+161/udp open snmp
+2. Enumerate Community Strings
+
+onesixtyone can be used to test a list of community strings.
+
+onesixtyone -c /path/to/snmp_communities.txt <TARGET>
+
+Example:
+
+public
+
+If public works, SNMPv2c enumeration can be performed using:
+
+snmpwalk -v2c -c public <TARGET>
+3. SNMPwalk
+
+Basic SNMP walk:
+
+snmpwalk -v2c -c public <TARGET>
+
+This can reveal a large amount of information.
+
+Useful information includes:
+
+OS
+Hostname
+System description
+Administrator contact
+System location
+Network interfaces
+Processes
+Installed software
+Storage
+Custom extensions
+Important System OIDs
+System Description
+.1.3.6.1.2.1.1.1.0
+
+Example:
+
+Linux NIX02 5.4.0-90-generic
+System Contact
+.1.3.6.1.2.1.1.4.0
+
+Can reveal an administrator's contact information.
+
+Example:
+
+devadmin <devadmin@inlanefreight.htb>
+System Name
+.1.3.6.1.2.1.1.5.0
+
+Can reveal the hostname.
+
+System Location
+.1.3.6.1.2.1.1.6.0
+
+Can contain useful information such as a customized service/version string.
+
+Query Specific OIDs
+
+Instead of walking everything, query a specific OID:
+
+snmpwalk -v2c -c public <TARGET> <OID>
+
+Example:
+
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.1
+
+This queries the SNMP system information tree.
+
+HOST-RESOURCES-MIB
+
+A very useful branch during SNMP enumeration is:
+
+.1.3.6.1.2.1.25
+
+Query it with:
+
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25
+
+It can expose information related to:
+
+Running processes
+Process parameters
+Storage
+Devices
+System resources
+Software information
+Running Processes
+
+Process information is available under:
+
+.1.3.6.1.2.1.25.4
+
+Query:
+
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25.4
+
+Useful process information may include:
+
+Process ID
+Process name
+Process parameters
+
+Example:
+
+/usr/bin/networkd-dispatcher --run-startup-triggers
+Custom SNMP Scripts
+
+During enumeration, don't only look at standard system information.
+
+SNMP can expose custom extensions/scripts.
+
+In the HTB lab, the HOST-RESOURCES-MIB revealed:
+
+/usr/share/flag.sh
+
+The custom extension was indexed using the name:
+
+FLAG
+
+The output was exposed through SNMP:
+
+HTB{5nMp_fl4g_uidhfljnsldiuhbfsdij44738b2u763g}
+Key Lesson
+
+If SNMP exposes custom script/extension information:
+
+Custom script
+      ↓
+SNMP MIB entry
+      ↓
+Script output
+      ↓
+Potentially sensitive information
+NET-SNMP Extension Enumeration
+
+Net-SNMP can expose extension-related objects.
+
+Useful branch:
+
+.1.3.6.1.4.1.8072
+
+You may encounter references to:
+
+nsExtendConfigTable
+nsExtendOut1Table
+nsExtendOut2Table
+
+If available, enumerate the relevant Net-SNMP extension tree.
+
+BRAA
+
+braa can query individual SNMP OIDs.
+
+Example:
+
+braa public@<TARGET>:.1.3.6.1.2.1.*
+
+More focused queries can be used when a specific MIB branch is known.
+
+Useful SNMP Commands Cheat Sheet
+Nmap SNMP scan
+sudo nmap -sU -p161 -sV <TARGET>
+SNMP NSE
+sudo nmap -sU -p161 --script=snmp-info <TARGET>
+Community enumeration
+onesixtyone -c /path/to/snmp_communities.txt <TARGET>
+Full SNMP walk
+snmpwalk -v2c -c public <TARGET>
+System information
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.1
+HOST-RESOURCES-MIB
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25
+Running processes
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25.4
+Net-SNMP extensions
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.4.1.8072
+Individual OID queries
+snmpwalk -v2c -c public <TARGET> <OID>
+BRAA
+braa public@<TARGET>:.1.3.6.1.2.1.*
+What to Look For
+
+When you obtain a valid community string, prioritize:
+
+✓ sysDescr
+✓ sysContact
+✓ sysName
+✓ sysLocation
+✓ Network interfaces
+✓ Running processes
+✓ Process parameters
+✓ Installed software
+✓ Storage
+✓ Custom MIBs
+✓ SNMP extensions
+✓ Custom scripts
+✓ Script output
+Practical Enumeration Example
+# Discover SNMP
+sudo nmap -sU -p161 -sV <TARGET>
+
+# Find community string
+onesixtyone -c snmp.txt <TARGET>
+
+# Full enumeration
+snmpwalk -v2c -c public <TARGET>
+
+# System information
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.1
+
+# HOST-RESOURCES-MIB
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25
+
+# Process information
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.2.1.25.4
+
+# Net-SNMP extensions
+snmpwalk -v2c -c public <TARGET> .1.3.6.1.4.1.8072
+CPTS Mindset
+
+Don't stop after finding:
+
+SNMP → public
+
+Continue:
+
+public
+  ↓
+snmpwalk
+  ↓
+System information
+  ↓
+Hostname / OS / Contact
+  ↓
+Processes
+  ↓
+Software
+  ↓
+Custom MIBs
+  ↓
+Extensions
+  ↓
+Custom scripts
+  ↓
+Script output
+
+The important lesson is that SNMP can expose much more than basic device information.
+
+A weak SNMP configuration can provide valuable information for further enumeration and attack-path development.
+
+HTB SNMP Lab
+Target
+10.129.180.180
+Community String
+public
+Admin Email
+devadmin@inlanefreight.htb
+Customized SNMP Version
+InFreight SNMP v0.91
+Custom Script
+/usr/share/flag.sh
+Script Output
+HTB{5nMp_fl4g_uidhfljnsldiuhbfsdij44738b2u763g}
+Key Takeaways
+SNMP = UDP 161
+SNMP traps = UDP 162
+
+v1  → weak/no security
+v2c → community string
+v3  → authentication/encryption
+
+public/private → common community strings
+
+snmpwalk    → enumerate SNMP objects
+onesixtyone → discover community strings
+braa        → query individual OIDs
+
+.1.3.6.1.2.1.1  → System information
+.1.3.6.1.2.1.25 → HOST-RESOURCES-MIB
+.1.3.6.1.2.1.25.4 → Running processes
+.1.3.6.1.4.1.8072 → Net-SNMP extensions
+
+Always investigate custom MIBs and SNMP extensions.

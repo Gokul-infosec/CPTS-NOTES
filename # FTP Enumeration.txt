@@ -1,0 +1,410 @@
+# FTP Enumeration
+
+## Overview
+
+**FTP (File Transfer Protocol)** is an application-layer protocol used to transfer files between a client and server.
+
+### Default Ports
+
+| Port     | Purpose                            |
+| -------- | ---------------------------------- |
+| `21/TCP` | FTP control connection             |
+| `20/TCP` | FTP data connection in active mode |
+
+FTP traditionally transmits credentials and data in plaintext unless encrypted with FTPS.
+
+---
+
+# Enumeration Methodology
+
+```text
+FTP discovered
+      ↓
+Identify version
+      ↓
+Grab banner
+      ↓
+Check anonymous access
+      ↓
+Enumerate files/directories
+      ↓
+Check read/write permissions
+      ↓
+Download interesting files
+      ↓
+Check FTP configuration
+      ↓
+Nmap NSE enumeration
+      ↓
+Identify potential attack paths
+```
+
+---
+
+# 1. Nmap Enumeration
+
+### Basic FTP scan
+
+```bash
+nmap -p21 <TARGET>
+```
+
+### Version detection
+
+```bash
+nmap -sV -p21 <TARGET>
+```
+
+### Default NSE scripts
+
+```bash
+nmap -sV -sC -p21 <TARGET>
+```
+
+### Aggressive scan
+
+```bash
+nmap -sV -sC -A -p21 <TARGET>
+```
+
+Look for:
+
+* FTP server software
+* Version
+* Anonymous login
+* Server information
+* Supported commands
+
+---
+
+# 2. Banner Grabbing
+
+Connect directly to FTP:
+
+```bash
+nc -nv <TARGET> 21
+```
+
+Alternative:
+
+```bash
+telnet <TARGET> 21
+```
+
+The banner may reveal:
+
+```text
+220 (vsFTPd 3.x.x)
+```
+
+Record the **entire banner/version**.
+
+---
+
+# 3. Anonymous Login
+
+Try:
+
+```bash
+ftp <TARGET>
+```
+
+When prompted:
+
+```text
+Name: anonymous
+Password: anonymous
+```
+
+Sometimes the password can be blank.
+
+Successful authentication may return:
+
+```text
+230 Login successful.
+```
+
+Then:
+
+```text
+ls
+```
+
+---
+
+# 4. FTP Client Commands
+
+Useful commands:
+
+```text
+ls
+pwd
+cd <directory>
+get <file>
+mget <files>
+put <file>
+mkdir <directory>
+delete <file>
+status
+help
+quit
+```
+
+### Download a file
+
+```text
+get flag.txt
+```
+
+### Upload a file
+
+```bash
+touch testupload.txt
+```
+
+Then:
+
+```text
+put testupload.txt
+```
+
+Only test upload/write access when explicitly authorized.
+
+---
+
+# 5. Recursive Enumeration
+
+If recursive listing is supported:
+
+```text
+ls -R
+```
+
+Look for:
+
+```text
+passwords
+credentials
+backup
+config
+database
+users
+documents
+flags
+private keys
+```
+
+---
+
+# 6. Download Files
+
+Example:
+
+```text
+get "Important Notes.txt"
+```
+
+Then exit:
+
+```text
+quit
+```
+
+Read locally:
+
+```bash
+cat "Important Notes.txt"
+```
+
+---
+
+# 7. Download Entire FTP Tree
+
+For authorized labs:
+
+```bash
+wget -m --no-passive ftp://anonymous:anonymous@<TARGET>
+```
+
+This recursively downloads accessible content.
+
+> In a real penetration test, bulk downloading can generate alerts and should only be performed within the agreed scope.
+
+---
+
+# 8. Check FTP Status
+
+Inside FTP:
+
+```text
+status
+```
+
+This can provide information about the current FTP connection.
+
+---
+
+# 9. FTP Configuration
+
+For vsFTPd, common configuration file:
+
+```text
+/etc/vsftpd.conf
+```
+
+View non-commented configuration:
+
+```bash
+cat /etc/vsftpd.conf | grep -v "#"
+```
+
+Important settings:
+
+```text
+anonymous_enable
+local_enable
+write_enable
+anon_upload_enable
+anon_mkdir_write_enable
+anon_root
+chroot_local_user
+chroot_list_enable
+hide_ids
+ls_recurse_enable
+ssl_enable
+```
+
+### Potentially dangerous configurations
+
+```text
+anonymous_enable=YES
+anon_upload_enable=YES
+anon_mkdir_write_enable=YES
+write_enable=YES
+```
+
+These can significantly increase exposure depending on the configuration.
+
+---
+
+# 10. FTP NSE Scripts
+
+Update Nmap scripts:
+
+```bash
+sudo nmap --script-updatedb
+```
+
+Find FTP scripts:
+
+```bash
+find /usr/share/nmap/scripts/ -type f -name "ftp*"
+```
+
+Useful scripts include:
+
+```text
+ftp-anon
+ftp-syst
+ftp-bounce
+ftp-vsftpd-backdoor
+ftp-proftpd-backdoor
+ftp-vuln-cve2010-4221
+```
+
+Example:
+
+```bash
+nmap -p21 --script ftp-anon <TARGET>
+```
+
+---
+
+# 11. FTPS
+
+FTPS uses TLS to secure FTP.
+
+Test STARTTLS:
+
+```bash
+openssl s_client -connect <TARGET>:21 -starttls ftp
+```
+
+Certificate information may reveal:
+
+* Hostname
+* Organization
+* Email
+* Location
+* Certificate details
+
+---
+
+# 12. Manual Enumeration
+
+FTP can be interacted with manually:
+
+```bash
+nc -nv <TARGET> 21
+```
+
+This can help understand the FTP protocol and server responses.
+
+---
+
+# CPTS Quick Checklist
+
+```bash
+# 1. Discover
+nmap -p21 <TARGET>
+
+# 2. Identify version
+nmap -sV -p21 <TARGET>
+
+# 3. NSE
+nmap -sV -sC -p21 <TARGET>
+
+# 4. Banner
+nc -nv <TARGET> 21
+
+# 5. Anonymous login
+ftp <TARGET>
+
+# 6. Enumerate
+ls
+ls -R
+
+# 7. Download
+get <FILE>
+
+# 8. Check TLS
+openssl s_client -connect <TARGET>:21 -starttls ftp
+```
+
+---
+
+# Key Takeaway
+
+```text
+FTP
+ ↓
+Version
+ ↓
+Banner
+ ↓
+Anonymous Access
+ ↓
+Files / Directories
+ ↓
+Read / Write Permissions
+ ↓
+Download / Upload
+ ↓
+NSE
+ ↓
+Attack Path
+```
+
+**Memory line:**
+
+> FTP → Version → Banner → Anonymous → Files → Permissions → Download/Upload → NSE → Attack Path

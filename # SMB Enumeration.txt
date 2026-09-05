@@ -1,0 +1,592 @@
+# SMB Enumeration
+
+## Overview
+
+**SMB (Server Message Block)** is a client-server protocol used to provide access to files, directories, printers, and other network resources.
+
+SMB is heavily associated with Windows environments but is also implemented on Linux/Unix systems through **Samba**.
+
+---
+
+# Default Ports
+
+| Port      | Service               |
+| --------- | --------------------- |
+| `139/TCP` | SMB over NetBIOS      |
+| `445/TCP` | SMB directly over TCP |
+
+Older SMB/CIFS environments may use NetBIOS-related services.
+
+Modern environments commonly use:
+
+```text
+445/TCP
+```
+
+---
+
+# SMB Versions
+
+| Version     | Notes                                                   |
+| ----------- | ------------------------------------------------------- |
+| CIFS / SMB1 | Legacy/outdated                                         |
+| SMB 2.0     | Improved performance                                    |
+| SMB 2.1     | Locking improvements                                    |
+| SMB 3.0     | Encryption/multichannel features                        |
+| SMB 3.1.1   | Modern SMB dialect with integrity/security improvements |
+
+---
+
+# Samba
+
+**Samba** provides SMB/CIFS functionality on Linux and Unix systems.
+
+Important Samba components include:
+
+```text
+smbd
+nmbd
+```
+
+Samba can also participate in Active Directory environments.
+
+---
+
+# Enumeration Methodology
+
+```text
+SMB discovered
+      ↓
+Identify version/banner
+      ↓
+Enumerate shares
+      ↓
+Test anonymous/null session
+      ↓
+Connect to accessible shares
+      ↓
+Enumerate files/directories
+      ↓
+Check read/write permissions
+      ↓
+RPC enumeration
+      ↓
+Enumerate users/groups/domain
+      ↓
+Inspect ACL/share information
+      ↓
+Identify attack paths
+```
+
+---
+
+# 1. Nmap Enumeration
+
+### Basic scan
+
+```bash
+nmap -p139,445 <TARGET>
+```
+
+### Version + default scripts
+
+```bash
+nmap -sV -sC -p139,445 <TARGET>
+```
+
+### SMB protocol enumeration
+
+```bash
+nmap -p139,445 --script smb-protocols <TARGET>
+```
+
+### SMB security mode
+
+```bash
+nmap -p139,445 --script smb2-security-mode <TARGET>
+```
+
+Look for:
+
+```text
+Message signing enabled but not required
+```
+
+This is important during SMB security assessment.
+
+---
+
+# 2. Enumerate SMB Shares
+
+Anonymous/null session:
+
+```bash
+smbclient -N -L //<TARGET>
+```
+
+Example:
+
+```text
+Sharename       Type      Comment
+---------       ----      -------
+print$          Disk      Printer Drivers
+sambashare      Disk      InFreight SMB v3.1
+IPC$            IPC       IPC Service
+```
+
+Identify interesting/custom shares.
+
+---
+
+# 3. Connect to a Share
+
+```bash
+smbclient -N //<TARGET>/<SHARE>
+```
+
+Example:
+
+```bash
+smbclient -N //10.129.108.122/sambashare
+```
+
+Inside the SMB client:
+
+```text
+ls
+pwd
+cd <directory>
+get <file>
+mget <files>
+put <file>
+help
+exit
+```
+
+---
+
+# 4. Enumerate Files
+
+Inside the share:
+
+```text
+ls
+```
+
+Move into directories:
+
+```text
+cd <directory>
+ls
+```
+
+Download interesting files:
+
+```text
+get flag.txt
+```
+
+Then locally:
+
+```bash
+cat flag.txt
+```
+
+### Important
+
+`smbclient` does **not** use normal Linux commands such as:
+
+```text
+cat
+```
+
+Instead:
+
+```text
+get file.txt
+```
+
+downloads the file, after which you can use:
+
+```bash
+cat file.txt
+```
+
+locally.
+
+---
+
+# 5. SMB Null Session
+
+A null session allows anonymous access without supplying valid credentials.
+
+Test:
+
+```bash
+smbclient -N -L //<TARGET>
+```
+
+RPC:
+
+```bash
+rpcclient -U "" <TARGET>
+```
+
+Press **Enter** when prompted for the password.
+
+Anonymous access can potentially expose:
+
+* Shares
+* Users
+* Domain information
+* Server information
+* Permissions
+* Other network details
+
+---
+
+# 6. RPCClient Enumeration
+
+Connect:
+
+```bash
+rpcclient -U "" <TARGET>
+```
+
+Useful commands:
+
+```text
+srvinfo
+enumdomains
+querydominfo
+netshareenumall
+netsharegetinfo <share>
+enumdomusers
+queryuser <RID>
+querygroup <RID>
+```
+
+### Server information
+
+```text
+srvinfo
+```
+
+### Domain information
+
+```text
+querydominfo
+```
+
+### Enumerate domains
+
+```text
+enumdomains
+```
+
+### Enumerate shares
+
+```text
+netshareenumall
+```
+
+### Get information about a specific share
+
+```text
+netsharegetinfo <share>
+```
+
+### Enumerate users
+
+```text
+enumdomusers
+```
+
+### Query a user
+
+```text
+queryuser <RID>
+```
+
+### Query a group
+
+```text
+querygroup <RID>
+```
+
+---
+
+# 7. SMBMap
+
+```bash
+smbmap -H <TARGET>
+```
+
+This can show:
+
+```text
+Share
+Permissions
+Comment
+```
+
+Useful for quickly identifying accessible shares.
+
+---
+
+# 8. CrackMapExec
+
+```bash
+crackmapexec smb <TARGET> --shares -u '' -p ''
+```
+
+This can enumerate SMB shares using an anonymous/empty credential attempt.
+
+---
+
+# 9. Enum4Linux-ng
+
+Install:
+
+```bash
+git clone https://github.com/cddmp/enum4linux-ng.git
+cd enum4linux-ng
+pip3 install -r requirements.txt
+```
+
+Run:
+
+```bash
+./enum4linux-ng.py <TARGET> -A
+```
+
+It can enumerate information such as:
+
+```text
+Target information
+SMB accessibility
+NetBIOS names
+Workgroup/domain
+SMB dialects
+SMB signing
+RPC information
+OS information
+Users
+Groups
+Shares
+Policies
+Printers
+```
+
+---
+
+# 10. Share Permissions
+
+Important concepts:
+
+```text
+READ
+WRITE
+FULL ACCESS
+```
+
+A share may be readable but not writable.
+
+Pay attention to configurations such as:
+
+```text
+browseable = yes
+read only = no
+writable = yes
+guest ok = yes
+```
+
+Potentially dangerous configurations can expose files or allow unauthorized modification.
+
+---
+
+# 11. Share Information
+
+Use:
+
+```text
+netsharegetinfo <SHARE>
+```
+
+Example:
+
+```text
+netname: sambashare
+remark: InFreight SMB v3.1
+path: C:\home\sambauser\
+```
+
+This can reveal:
+
+* Share name
+* Custom comment/remark
+* Filesystem path
+* Permissions
+* ACL information
+* SID/ACE information
+
+---
+
+# 12. ACLs
+
+SMB access can be controlled through **Access Control Lists (ACLs)**.
+
+Permissions may include:
+
+```text
+READ
+WRITE
+DELETE
+WRITE_OWNER
+WRITE_DAC
+FULL ACCESS
+```
+
+Always determine:
+
+```text
+Who can access?
+What can they read?
+What can they modify?
+What can they delete?
+```
+
+---
+
+# 13. SMB Security
+
+Check SMB signing:
+
+```bash
+nmap -p445 --script smb2-security-mode <TARGET>
+```
+
+Example:
+
+```text
+Message signing enabled but not required
+```
+
+Also identify supported SMB dialects:
+
+```bash
+nmap -p445 --script smb-protocols <TARGET>
+```
+
+---
+
+# CPTS Quick Checklist
+
+```bash
+# 1. Discover SMB
+nmap -p139,445 <TARGET>
+
+# 2. Version + scripts
+nmap -sV -sC -p139,445 <TARGET>
+
+# 3. Enumerate shares
+smbclient -N -L //<TARGET>
+
+# 4. Connect to share
+smbclient -N //<TARGET>/<SHARE>
+
+# 5. Enumerate files
+ls
+
+# 6. Download interesting file
+get <FILE>
+
+# 7. RPC enumeration
+rpcclient -U "" <TARGET>
+
+# 8. Server information
+srvinfo
+
+# 9. Domain information
+querydominfo
+
+# 10. Enumerate shares
+netshareenumall
+
+# 11. Enumerate users
+enumdomusers
+
+# 12. Share details
+netsharegetinfo <SHARE>
+
+# 13. SMBMap
+smbmap -H <TARGET>
+
+# 14. Enum4Linux-ng
+enum4linux-ng <TARGET> -A
+```
+
+---
+
+# SMB Enumeration Mindset
+
+When you see:
+
+```text
+139/tcp
+445/tcp
+```
+
+Think:
+
+```text
+SMB
+ ↓
+Shares
+ ↓
+Anonymous / Null Session
+ ↓
+Files
+ ↓
+Read / Write
+ ↓
+RPC
+ ↓
+Users
+ ↓
+Groups
+ ↓
+Domain
+ ↓
+ACLs
+ ↓
+Credentials / Sensitive Information
+ ↓
+Attack Path
+```
+
+---
+
+# Key Takeaway
+
+**Never stop at "SMB is open."**
+
+Ask:
+
+```text
+What shares exist?
+Can I access them anonymously?
+What files are exposed?
+Can I read them?
+Can I write?
+What users exist?
+What domain/workgroup exists?
+What permissions are assigned?
+What additional information can RPC reveal?
+```
+
+Also, do not rely on a single automated tool. Different SMB enumeration tools can return different information, so important findings should be manually verified.
+
+**Memory line:**
+
+> SMB → Version → Shares → Null Session → Files → Permissions → RPC → Users → Groups → Domain → ACLs → Attack Path

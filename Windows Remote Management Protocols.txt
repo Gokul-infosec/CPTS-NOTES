@@ -1,0 +1,277 @@
+ Windows Remote Management Protocols
+
+## Overview
+
+Windows remote management mainly involves:
+
+- **RDP** — Remote Desktop Protocol
+- **WinRM** — Windows Remote Management
+- **WMI** — Windows Management Instrumentation
+
+These services can expose valuable information and provide remote access when misconfigured or when valid credentials are obtained.
+
+---
+
+# RDP — Remote Desktop Protocol
+
+## Basics
+
+- Microsoft protocol for remotely accessing Windows systems.
+- Provides GUI-based remote access.
+- Works at the application layer.
+- Common ports:
+  - `TCP/3389`
+  - `UDP/3389`
+- RDP supports TLS/SSL.
+- NLA (Network Level Authentication) is commonly enabled.
+
+### Important
+
+RDP requires the network/server firewall to permit connections.
+
+---
+
+# RDP Enumeration
+
+## Nmap
+
+```bash
+nmap -sV -sC <TARGET> -p3389 --script rdp*
+
+Useful information:
+
+RDP service/version
+NLA status
+Hostname
+NetBIOS name
+DNS computer name
+Product version
+System time
+Example
+3389/tcp open ms-wbt-server Microsoft Terminal Services
+
+CredSSP (NLA): SUCCESS
+CredSSP with Early User Auth: SUCCESS
+RDSTLS: SUCCESS
+
+Target_Name: ILF-SQL-01
+NetBIOS_Computer_Name: ILF-SQL-01
+DNS_Computer_Name: ILF-SQL-01
+Product_Version: 10.0.17763
+RDP Packet Inspection
+nmap -sV -sC <TARGET> -p3389 \
+--packet-trace \
+--disable-arp-ping \
+-n
+
+Nmap can use an RDP cookie such as:
+
+mstshash=nmap
+
+Security tools/EDR may detect these scanning patterns.
+
+RDP Security Check
+
+Tool:
+
+git clone https://github.com/CiscoCXSecurity/rdp-sec-check.git
+cd rdp-sec-check
+./rdp-sec-check.pl <TARGET>
+
+The tool can identify:
+
+Supported RDP security protocols
+Whether NLA/CredSSP is supported
+TLS support
+RDP security layer
+Encryption methods
+
+Example:
+
+PROTOCOL_SSL     : FALSE
+PROTOCOL_HYBRID  : TRUE
+PROTOCOL_RDP     : FALSE
+RDP Client
+
+Common Linux clients:
+
+xfreerdp
+rdesktop
+Remmina
+xfreerdp
+xfreerdp /u:<USER> /p:'<PASSWORD>' /v:<TARGET>
+
+Example:
+
+xfreerdp /u:cry0l1t3 /p:'P455w0rd!' /v:10.129.201.248
+Certificate Issues
+
+HTB labs may use self-signed certificates.
+
+You may see:
+
+Certificate verification failure 'self signed certificate'
+
+The certificate may also contain a hostname that differs from the IP used for the connection.
+
+WinRM — Windows Remote Management
+Basics
+
+WinRM is a Windows command-line based remote management protocol.
+
+It uses:
+
+SOAP
+WS-Management
+Ports
+Port	Protocol
+5985/TCP	HTTP
+5986/TCP	HTTPS
+
+WinRM can be used with Windows Remote Shell (WinRS) to execute commands remotely.
+
+WinRM Enumeration
+nmap -sV -sC <TARGET> -p5985,5986 --disable-arp-ping -n
+
+Typical result:
+
+5985/tcp open http Microsoft HTTPAPI httpd 2.0
+
+Often 5985 is exposed while 5986 is not.
+
+WinRM — Linux Access
+Evil-WinRM
+evil-winrm -i <TARGET> -u <USER> -p '<PASSWORD>'
+
+Example:
+
+evil-winrm -i 10.129.201.248 \
+-u Cry0l1t3 \
+-p 'P455w0rD!'
+
+Successful connection:
+
+*Evil-WinRM* PS C:\Users\Cry0l1t3\Documents>
+Why WinRM Matters
+
+Valid Windows credentials + exposed WinRM can provide:
+
+Credentials
+     ↓
+WinRM
+     ↓
+Remote PowerShell
+     ↓
+Windows host access
+WMI — Windows Management Instrumentation
+Basics
+
+WMI is Microsoft's implementation/extension of CIM.
+
+It provides remote management and access to Windows system settings.
+
+WMI can be accessed through:
+
+PowerShell
+VBScript
+WMIC
+Impacket tools
+
+WMI is not a single program; it consists of multiple components and repositories.
+
+WMI Enumeration / Remote Execution
+
+WMI communication initially uses:
+
+TCP/135
+
+After establishing the connection, communication moves to a random port.
+
+wmiexec.py
+
+Impacket provides wmiexec.py.
+
+/usr/share/doc/python3-impacket/examples/wmiexec.py \
+<USER>:"<PASSWORD>"@<TARGET> "hostname"
+
+Example:
+
+/usr/share/doc/python3-impacket/examples/wmiexec.py \
+Cry0l1t3:"P455w0rD!"@10.129.201.248 "hostname"
+
+Example result:
+
+[*] SMBv3.0 dialect used
+ILF-SQL-01
+Ports Cheat Sheet
+Service	Port	Transport
+RDP	3389	TCP/UDP
+WinRM	5985	TCP/HTTP
+WinRM	5986	TCP/HTTPS
+WMI initialization	135	TCP
+CPTS Enumeration Workflow
+1. Scan
+   ↓
+2. Identify Windows Remote Services
+   ↓
+3. Enumerate RDP
+   ↓
+4. Check NLA / security settings
+   ↓
+5. Enumerate WinRM
+   ↓
+6. Enumerate WMI
+   ↓
+7. Look for valid credentials
+   ↓
+8. Test authorized remote access
+   ↓
+9. Enumerate the Windows host
+Quick Commands
+RDP
+nmap -sV -sC <TARGET> -p3389 --script rdp*
+./rdp-sec-check.pl <TARGET>
+xfreerdp /u:<USER> /p:'<PASSWORD>' /v:<TARGET>
+WinRM
+nmap -sV -sC <TARGET> -p5985,5986
+evil-winrm -i <TARGET> -u <USER> -p '<PASSWORD>'
+WMI
+nmap -sV -sC <TARGET> -p135
+wmiexec.py <USER>:"<PASSWORD>"@<TARGET> "hostname"
+CPTS Mindset
+
+When you see a Windows host:
+
+3389 → RDP
+5985 → WinRM HTTP
+5986 → WinRM HTTPS
+135   → WMI/RPC
+
+Think:
+
+PORT
+ ↓
+SERVICE
+ ↓
+VERSION / HOSTNAME
+ ↓
+SECURITY CONFIGURATION
+ ↓
+CREDENTIALS
+ ↓
+REMOTE ACCESS
+ ↓
+HOST ENUMERATION
+Key Takeaways
+RDP provides GUI-based remote access.
+WinRM provides command-line/PowerShell remote management.
+WMI provides powerful Windows management functionality.
+RDP commonly uses 3389.
+WinRM uses 5985/5986.
+WMI communication begins through 135.
+Nmap can reveal RDP security information, NLA status, hostnames, and versions.
+rdp-sec-check can inspect RDP security settings.
+xfreerdp can establish RDP sessions.
+evil-winrm can interact with WinRM.
+wmiexec.py can execute commands through WMI.
+Weak/default/reused credentials combined with exposed remote-management services can provide significant access.
