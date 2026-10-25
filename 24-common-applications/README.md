@@ -242,8 +242,55 @@ Generic, not Joomla-specific — see the dedicated modules:
 ### Web shells
 Obfuscated shell generation/detection is covered once in the WordPress section above (I don't store working payloads). Same technique applies here.
 
+## Drupal — discovery & enumeration (reference)
+Target `<URL>`. Drupal structure: `/modules/`, `/themes/`, `/sites/`, node-based URLs (`/node/1`).
+
+### Identify & version
+```bash
+curl -s <URL> | grep -i drupal                         # HTML metadata
+curl -s <URL>/robots.txt                               # disallows + node refs
+curl -s <URL>/CHANGELOG.txt                            # version (often blocked)
+curl -s <URL>/rss.xml | grep generator                # generator metadata
+curl -s <URL>/core/assets/vendor/jquery/jquery.min.js | grep -i drupal
+droopescan scan drupal -u <URL>                        # automated version + modules/themes
+# if DB access gained:  SELECT version FROM system;
+```
+
+### Modules & themes (find exact versions in .info.yml)
+```bash
+curl -s <URL>/modules/
+curl -s <URL>/modules/<module>/<file>.info.yml
+curl -s <URL>/themes/
+curl -s <URL>/themes/<theme>/<file>.info.yml
+```
+
+### Config / backups / debug exposure
+```bash
+curl -s <URL>/sites/default/settings.php               # DB creds if readable
+curl -s <URL>/sites/default/files/backup.sql           # exposed DB backup
+curl -s <URL>/phpinfo.php                               # debug left enabled
+```
+
+### Users / content / APIs
+```bash
+curl -s <URL>/?q=user                                  # public profiles
+curl -s <URL>/user/1                                   # default admin enum
+curl -s <URL>/rest/user/login_status?_format=json      # REST API if enabled
+curl -s <URL>/node/2                                   # sequential node IDs
+curl -s <URL>/node.json                                # JSON API enabled?
+curl -X POST <URL>/graphql -H "Content-Type: application/json" --data '{"query":"{__schema{types{name}}}"}'   # GraphQL schema
+```
+
+### Admin panel
+```bash
+curl -s <URL>/user/login
+curl -s <URL>/admin
+```
+
+> `settings.php` and exposed `backup.sql` leak DB creds — critical. Known Drupal RCEs (e.g. Drupalgeddon2 CVE-2018-7600) depend on exact core version, so fingerprint first.
+
 ### My notes / lab output
-Filled in once I run this on a WordPress or Joomla target.
+Filled in once I run this on a WordPress / Joomla / Drupal target.
 
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
