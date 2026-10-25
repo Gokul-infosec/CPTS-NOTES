@@ -149,6 +149,43 @@ Ports to know instantly (goal: recognize from the number alone):
 
 **My takeaway:** know both lists for interviews, and say which version you mean.
 
+#### Basic Tools
+Not pentest-specific, but used daily, so worth mastering. Reference below.
+
+**SSH (22):** secure remote access via password or key. More stable than a reverse shell; good as a jump host for pivoting, file transfer, persistence.
+```bash
+ssh user@<TARGET>              # connect with creds
+```
+
+**Netcat / nc:** TCP/UDP swiss-army tool — connect to ports, grab banners, move files, handle shells.
+```bash
+nc -nv <TARGET> 22            # connect / banner grab (-n no DNS, -v verbose)
+```
+- `ncat` (nmap) and `socat` are richer alternatives. `socat` can port-forward, talk to serial devices, and upgrade a shell to a full TTY. PowerCat is a PowerShell netcat for Windows.
+
+**tmux** — terminal multiplexer (multiple windows/panes in one terminal, good for logging during engagements). Prefix = `Ctrl+b`.
+| Keys | Action |
+|---|---|
+| `Ctrl+b` then `c` | New window |
+| `Ctrl+b` then `0`/`1`… | Switch to window N |
+| `Ctrl+b` then `Shift+%` | Split vertical pane |
+| `Ctrl+b` then `Shift+"` | Split horizontal pane |
+| `Ctrl+b` then arrows | Move between panes |
+```bash
+sudo apt install tmux -y
+```
+
+**Vim** — keyboard-only editor; often the only one on a compromised Linux host. Modes: normal (navigate) → `i` insert → `Esc` back to normal → `:` command.
+| Normal mode | Action |
+|---|---|
+| `x` / `dw` / `dd` | Cut char / word / line |
+| `yw` / `yy` / `p` | Copy word / line / paste |
+| (prefix a number) | Repeat, e.g. `4yw` copies 4 words |
+| `:w` `:q` `:q!` `:wq` | Save / quit / quit-no-save / save+quit |
+| `:1` | Go to line 1 |
+
+**My takeaway:** an SSH session beats a shaky reverse shell when I have creds, and knowing Vim means I can edit files on any box I land on.
+
 #### Service Scanning (command reference)
 Goal of the section: identify the OS and running services, then look for misconfigured or outdated ones. Ports 1-1023 = well-known/privileged. Default Nmap scans top 1000 TCP ports only.
 
