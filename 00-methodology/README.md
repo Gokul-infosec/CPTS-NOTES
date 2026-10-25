@@ -6,7 +6,12 @@ My own workflow, built up module by module. Updated whenever a module changes ho
 - Scope, rules of engagement, what's out of bounds
 
 ## 2. Information gathering
-- 
+Do all four, every time:
+- OSINT: company, employees, leaked secrets (code repos, forums), tech stack from job posts
+- Infrastructure: DNS, name / mail / web servers, cloud assets → host + IP list, checked against scope; spot WAFs / firewalls
+- Services: name, version, what it leaks, why it exists
+- Hosts: OS, ports, services, role, what it talks to
+- After a foothold: pillage the host (files, creds, configs, users, local services)
 
 ## 3. Enumeration
 - 

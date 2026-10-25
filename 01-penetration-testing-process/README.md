@@ -193,6 +193,23 @@ This drives the people assigned, the timeline and the price (10 external IPs ≪
 - Know the pause-and-notify rules (external critical finding vs internal stop conditions). That's a classic scenario question.
 - For physical tests, always carry the signed contractor's agreement.
 
+#### Information Gathering
+The cornerstone of the whole test and the stage I return to most. Every exploit I run is only as good as the info behind it. Four categories, **all mandatory on every test:**
+
+| Category | What I'm after | Notes |
+|---|---|---|
+| OSINT | Public info on the company and its people: events, dependencies, connections | Passwords, hashes, keys and tokens leak in misconfigured GitHub repos and code snippets posted on forums like StackOverflow. Found a live secret? Report it immediately per the RoE's incident handling section, and have the client's admin review it before I continue. |
+| Infrastructure enumeration | Map of the company's presence on the internet / intranet: name servers, mail, web, cloud instances | OSINT + first active scans (DNS is key). Build a host / IP list and **check it against scope**. Also identify defenses (firewalls, WAFs) to know what will trigger alerts. Internally, this map feeds password spraying (one password vs many usernames). |
+| Service enumeration | Each service: what it is, version, what info it leaks, *why it exists* | Old versions = known vulns. Admins often leave them unpatched because they're scared of breaking something that works. |
+| Host enumeration | Per in-scope host: OS, services, versions, ports, its role, what it talks to | Internal services are often misconfigured because admins assume "not internet-facing = safe" (e.g. anonymous FTP, end-of-life OS). After exploitation, host enum moves *inside* the box: sensitive files, local services, scripts, apps. |
+
+**Pillaging:** collecting sensitive info on an already exploited host (employee names, customer data, creds, configs). It isn't its own stage. It's part of information gathering and privesc, done locally after access. It shows impact and fuels privesc / lateral movement. There's no dedicated module; it's spread across Nmap, Getting Started, Password Attacks, AD, Linux/Windows privesc, Common Services, Common Applications and Enterprise Networks. The path has 150+ targets and 9 mini pentests to practice it.
+
+**My takeaways:**
+- Every target: do all four categories (OSINT, infrastructure, service, host). Skipping one is how things get missed.
+- For every service, ask *why is this here?* The purpose points to the attack.
+- Internal = where the lazy configs are.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
