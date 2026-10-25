@@ -83,6 +83,37 @@ The big picture of a pentest: the phases, how every later module fits into them,
 - Black / grey / white box and internal vs external.
 - Always confirm the client actually owns what's in scope, especially cloud and third-party hosted assets.
 
+#### Laws and Regulations
+Every country has its own laws on unauthorized access, data protection, interception, health data and children's data. Breaking them can mean civil *and* criminal penalties, even during "research".
+
+**Key laws by region (the ones worth remembering):**
+
+| Region | Unauthorized access / hacking | Personal data | Other |
+|---|---|---|---|
+| USA | CFAA (criticized as broad and vague) | — | DMCA (bypassing copy protection), ECPA (intercepting comms), HIPAA (health data), COPPA (children under 13) |
+| EU | NIS Directive (NIS2) | GDPR: fines up to 4% of global annual revenue or €20M, whichever is higher. Applies to *any* company processing EU citizens' data, wherever it's based. | E-Privacy Directive, Council of Europe Cybercrime Convention (first international cybercrime treaty) |
+| UK | Computer Misuse Act 1990 | Data Protection Act 2018 | RIPA 2000, IPA 2016 (covert/investigatory powers), Human Rights Act 1998 |
+| India | IT Act 2000 | Digital Personal Data Protection (DPDP) Act | Evidence and criminal law used in cybercrime cases |
+| China | National Security Law, Anti-Terrorism Law | Cyber Security Law, cross-border data transfer rules | Critical infrastructure protection regulation |
+
+**India: what applies to me (updated beyond the module):**
+- **IT Act 2000** is the main one. Section 43 covers unauthorized access (civil penalty) and Section 66 makes it a criminal offence when done dishonestly or fraudulently.
+- **DPDP Act** was listed as "proposed" in the module, but it was enacted in 2023.
+- The **Indian Penal Code 1860** and **Indian Evidence Act 1872** named in the module were replaced in July 2024 by the **Bharatiya Nyaya Sanhita (BNS) 2023** and **Bharatiya Sakshya Adhiniyam 2023**.
+
+**Precaution checklist for every engagement:**
+- [ ] Written consent from the owner or an authorized representative
+- [ ] Test only within that consent, respecting every limitation
+- [ ] Take steps to avoid damaging systems or networks
+- [ ] Don't access, use or disclose personal data without permission
+- [ ] Don't intercept communications without consent of at least one party
+- [ ] No testing of health-data (HIPAA) systems without proper authorization
+- [ ] Unsure about local rules? Check, or ask a lawyer.
+
+**My takeaways:**
+- Written consent within scope is what separates a pentest from a crime, in every country.
+- For Indian VAPT interviews, know IT Act Sections 43 / 66 and the DPDP Act.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
