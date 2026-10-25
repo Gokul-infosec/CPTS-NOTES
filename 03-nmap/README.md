@@ -62,6 +62,8 @@ Use Nmap to discover live hosts, open ports, services, versions and the OS, and 
 | `--scan-delay` / `--max-scan-delay` | Delay between probes |
 | `--max-retries <n>` | Probe retransmissions per port |
 | `--min-rate` / `--max-rate` | Packets per second bounds |
+| `--min-hostgroup` / `--max-hostgroup` | Hosts scanned in parallel |
+| `--min-parallelism` / `--max-parallelism` | Probes sent in parallel |
 
 ### Service / version & OS detection
 | Flag | Meaning |
@@ -69,7 +71,9 @@ Use Nmap to discover live hosts, open ports, services, versions and the OS, and 
 | `-sV` | Service version detection |
 | `--version-intensity <0-9>` / `--version-light` / `--version-all` | Detection depth |
 | `-O` | OS detection |
+| `--osscan-limit` | Skip OS scan if conditions aren't ideal |
 | `--osscan-guess` | Guess aggressively |
+| `--max-os-tries <n>` | Max OS detection tries |
 | `-A` | OS + version + default scripts + traceroute |
 
 ### NSE scripts
@@ -123,6 +127,41 @@ nmap -Pn -n -sS -p- -T4 <ip>                    # stealth SYN, all ports, no DNS
 - **Output:** `-oN` normal · `-oX` XML · `-oG` grepable · `-oA <base>` all three
 
 > Note: faster scans (`-T4/-T5`, high `--min-rate`) finish quicker but are louder to an IDS; slow scans (`-T0/-T1`, `--scan-delay`) are for evasion. Decoy/spoof/source-port tricks are evasion techniques — scope + approval only.
+
+## 3c. NSE usage examples
+
+```text
+# selection
+nmap --script=default,safe <target>              # safe default set
+nmap --script "not intrusive" <target>           # everything except intrusive
+nmap -sV --version-all -p <port> <target>        # aggressive service detection
+
+# discovery / enum examples
+nmap -Pn --script=http-sitemap-generator <target>
+nmap -Pn --script=dns-brute <target>
+nmap -n -Pn -vv -O -sV --script smb-* <target>
+nmap --script whois* <target>
+
+# vuln checks (known CVEs)
+nmap --script vuln <target>
+nmap -sV --script vulners <target>
+nmap -p80 --script http-sql-injection <target>
+nmap -p80 --script http-vuln-cve2017-5638 <target>   # Struts2
+nmap -p80 --script http-vuln-cve2015-1635 <target>   # HTTP.sys
+
+# web tech / framework fingerprint
+nmap -p80,443 --script=http-headers,http-title,http-methods,http-enum,http-php-version,http-wordpress-enum,http-drupal-enum <target>
+```
+
+### Script args (auth'd / brute examples — scope + approval only)
+```text
+nmap -p21 --script ftp-brute --script-args "userdb=users.txt,passdb=pass.txt" <target>
+nmap -p445 --script smb-enum-users,smb-enum-shares --script-args smbuser=<u>,smbpass=<p> <target>
+nmap -p80 --script http-form-brute \
+  --script-args 'http-form-brute.path=/login,http-form-brute.uservar=username,http-form-brute.passvar=password' <target>
+```
+
+> Full per-service NSE script list is in [`cheatsheets/nse-scripts-by-service.md`](../cheatsheets/nse-scripts-by-service.md). `brute` and credential scripts are intrusive and can lock accounts — in-scope, approved use only.
 
 ## 4. Commands I ran (lab)
 Filled in once I run these on Pwnbox, with real IPs as `<TARGET_IP>`.
