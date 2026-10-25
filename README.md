@@ -172,7 +172,7 @@ CPTS-NOTES/
 | [Penetration Testing Process](01-penetration-testing-process/) | 🟨 | |
 | [Getting Started](02-getting-started/) | 🟨 | |
 | [Network Enumeration with Nmap](03-nmap/) | 🟨 | |
-| [Footprinting](04-footprinting/) | ⬜ | |
+| [Footprinting](04-footprinting/) | 🟨 | |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | ⬜ | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
 | [File Transfers](07-file-transfers/) | ⬜ | |
@@ -191,7 +191,7 @@ CPTS-NOTES/
 | [File Inclusion](20-file-inclusion/) | ⬜ | |
 | [File Upload Attacks](21-file-upload/) | ⬜ | |
 | [Command Injections](22-command-injection/) | ⬜ | |
-| [Web Attacks](23-web-attacks/) | ⬜ | |
+| [Web Attacks](23-web-attacks/) | 🟨 | |
 | [Attacking Common Applications](24-common-applications/) | 🟨 | |
 | [Linux Privilege Escalation](25-linux-privesc/) | ⬜ | |
 | [Windows Privilege Escalation](26-windows-privesc/) | ⬜ | |

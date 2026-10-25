@@ -663,6 +663,66 @@ echo "<MY_IP> server.local" | sudo tee -a /etc/hosts
 
 > Thick clients hide secrets in the binary and on the wire. The two highest-value moves: run Process Monitor while the app works to catch dropped files, and intercept its traffic — creds are usually in one or the other.
 
+### ColdFusion (reference)
+Java-based CFML platform. Extensions `.cfm`/`.cfc`. Ports: 80/443/8500/5500/1935/25.
+
+**Enum**
+```bash
+nmap -p- -sC -Pn <HOST> --open
+curl -I http://<HOST>              # Server/X-Powered-By: ColdFusion
+# strong tell: /CFIDE/administrator , admin.cfm , cfdocs
+gobuster dir -u http://<HOST>:8500 -w <wordlist>
+```
+
+**Known CVEs**
+```bash
+searchsploit adobe coldfusion
+# CVE-2010-2861 directory traversal (read arbitrary files via locale param)
+python2 14641.py <HOST> 8500 "../../../../../../ColdFusion8/lib/password.properties"
+# CVE-2009-2265 unauth RCE via FCKeditor file upload (exploit 50057.py — edit IP/port)
+```
+> password.properties holds the admin hash — classic ColdFusion loot.
+
+### IIS Tilde (8.3 short name) Enumeration (reference)
+IIS exposes legacy 8.3 short names via the `~` char (`SecretDocuments` → `SECRET~1`). Affected IIS 5.0–8.5. A `200`/`404` difference leaks valid short names, then brute the full name.
+```bash
+nmap -p- -sV -sC --open <HOST>
+java -jar iis_shortname_scanner.jar 0 5 http://<HOST>/     # automate
+# build a wordlist filtered to the discovered prefix, then:
+gobuster dir -u http://<HOST>/ -w /tmp/list.txt -x .aspx,.asp
+```
+**Fix:** `fsutil behavior set disable8dot3 1`, URL-rewrite rules to block `~`.
+
+### Apps Connecting to Services — pulling creds from binaries (reference)
+Apps that connect to a DB usually carry a **connection string** with creds.
+- **ELF (Linux):** debug in GDB/PEDA, disassemble `main`, breakpoint the `SQLDriverConnect` call, read the connection string from registers (RDX).
+```bash
+gdb ./octopus_checker
+set disassembly-flavor intel
+disas main
+b *0x<addr>
+run          # inspect RDX for the connection string
+```
+- **DLL (.NET, Windows):** `Get-FileMetaData .\MultimasterAPI.dll`, then decompile in **dnSpy** and read controller classes for connection strings.
+- Then: test the creds for **reuse** / **password spraying** against other services.
+
+### Other Notable Applications (methodology + quick vuln map)
+Methodology beats memorizing tools: enumerate thoroughly (EyeWitness for visual triage), stay adaptable, **always check default creds and known CVEs**, abuse built-in "run a command/upload" features.
+
+| App | Typical win |
+|---|---|
+| Axis2 | weak/default creds → RCE via malicious AAR upload |
+| WebSphere | default `system:manager` → RCE via WAR deploy |
+| Elasticsearch | old forgotten installs, past RCEs |
+| Zabbix | SQLi, auth bypass, LDAP pw disclosure, API → RCE |
+| Nagios | default `nagiosadmin:PASSW0RD`, multiple RCEs |
+| WebLogic | many CVEs incl. unauth RCE |
+| MediaWiki/SharePoint | known exploits, search → credential disclosure |
+| DotNetNuke (DNN) | auth bypass, dir traversal, file upload/download |
+| vCenter | weak creds, Struts2 RCE, OVA upload, Win appliance privesc |
+
+> The through-line of this whole module: **default creds + a built-in "execute/upload" feature = RCE**, on almost every app. Check creds and CVEs first, every time.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
