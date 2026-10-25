@@ -428,6 +428,45 @@ set RHOSTS <IP>; set USERNAME <u>; set PASSWORD <p>; run
 
 > The default-creds → `/manager` → WAR-upload path is still the most common real-world Tomcat compromise. The CVEs matter when creds fail or Manager isn't reachable.
 
+### Jenkins — discovery, enum & attacking (reference)
+Default ports: **8080** (web UI), **50000** (agent/slave comms, often overlooked). Intrusive actions: scope + approval.
+
+**Detection**
+```bash
+curl -I http://<HOST>:8080/            # X-Jenkins header shows version
+nmap -sV -p8080,50000 <HOST>
+```
+
+**Enumeration**
+```bash
+# via web
+curl http://<HOST>:8080/pluginManager/        # installed plugins (common vuln source)
+curl http://<HOST>:8080/configureSecurity/     # auth realm (Jenkins DB / LDAP) + access control
+curl http://<HOST>:8080/api/json               # API — may leak job/user data
+# via CLI
+java -jar jenkins-cli.jar -s http://<HOST>:8080/ list-jobs
+java -jar jenkins-cli.jar -s http://<HOST>:8080/ list-plugins
+```
+
+**Weak/default creds**
+Try `admin:admin`, `admin:password`.
+```text
+msf6> use auxiliary/scanner/http/jenkins_login ; set RHOSTS <IP> ; run
+```
+
+**Script Console RCE (the main Jenkins finding)**
+With access to `/script` (Groovy console) or `groovysh` via CLI, Jenkins runs arbitrary Groovy = RCE as the Jenkins user. This is why Script Console access is critical. Fix: lock down `/script`, enforce auth + matrix authorization.
+
+**Deserialization** — older Jenkins/CLI are vulnerable to Java deserialization; `ysoserial` (CommonsCollections gadgets) generates payloads for vulnerable endpoints. Version-specific.
+
+**Post-exploitation**
+```bash
+cat /var/lib/jenkins/credentials.xml      # stored creds (often encrypted — pull the master key too)
+```
+Persistence via planted job/JSP under `/var/lib/jenkins/jobs/` — I don't store backdoor payloads; see the web-shell detection note. Note persistence + access-control changes in the report for cleanup.
+
+> Jenkins = fast RCE: default creds → Script Console → shell as the build user, then loot `credentials.xml` for pivoting into whatever the CI connects to (often the juiciest part).
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
