@@ -114,6 +114,26 @@ Every country has its own laws on unauthorized access, data protection, intercep
 - Written consent within scope is what separates a pentest from a crime, in every country.
 - For Indian VAPT interviews, know IT Act Sections 43 / 66 and the DPDP Act.
 
+#### Penetration Testing Process
+- **Pentest process:** the successive steps I take to find a path to a predefined objective. It's *deterministic*: every step is based on results I discover or provoke, not chance.
+- **Not a recipe.** Stages stay coarse and flexible because every client's infrastructure and expectations differ. I can build my own playbook per stage, but I always have to adapt.
+- **Starting over isn't failure.** Going back to the start with new information is a new pass that builds on the old one.
+
+**What this section adds to the stage table above:**
+- **Pre-Engagement** sets up, in a meeting or call: NDA, goals, scope, time estimate, rules of engagement. Part of it is educating the client.
+- **Post-Exploitation** also means keeping access if the box changes (persistence), plus pillaging for creds and the data the client most wants protected. It's done to show impact or to feed lateral movement.
+- **Lateral Movement** example chain: foothold on a web server → privesc → password in the registry → same password is local admin on a DB server → pillage the DB → more creds → deeper access.
+- **Proof-of-Concept** tells the story of how weaknesses *chain* together, so the client can see how each vuln fits in and prioritize fixes. Bad documentation = hard remediation.
+- **Post-Engagement:**
+  - Separate documentation for admins (technical) and management (severity and risk)
+  - Clean up all traces on every host
+  - Report walkthrough meeting, sometimes an executive or board presentation
+  - Archive testing data per the contract and company policy, kept until a set period ends or until the **retest** (post-remediation assessment)
+
+**My takeaways:**
+- A finding alone is weak. A *chain* (initial access → privesc → lateral → crown jewels) shows real impact.
+- Two audiences for every report: technical teams need repro steps, management needs risk.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
