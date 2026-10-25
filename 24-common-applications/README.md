@@ -620,6 +620,49 @@ Reading `/etc/passwd` is the standard confirmation. From here RCE/reverse-shell 
 
 > CGI is legacy but still shows up. Both of these are "old box" wins — always fuzz `/cgi-bin/` and `/cgi/` and check the Bash/Tomcat version.
 
+### Thick Client Applications (reference)
+Locally installed apps (.NET, Java, C++) that do client-side processing. **Two-tier** = client talks straight to DB; **three-tier** = client → app server → DB. Common flaws: hardcoded creds, DLL hijacking, insecure local storage, unencrypted comms, path traversal, SQLi.
+
+**Analysis by surface:**
+| Surface | What to do | Tools |
+|---|---|---|
+| Info gathering | Identify language/framework, PE headers, deps | CFF Explorer, Detect It Easy, PE Explorer, Process Monitor, `strings` |
+| Client-side | Decompile/disassemble, deobfuscate | Ghidra, IDA, dnSpy, x64dbg, Radare2, JADX, Frida, de4dot (.NET) |
+| Network-side | Capture/inspect/MITM traffic | Wireshark, tcpdump, Burp, mitmproxy, TCPView |
+| Server-side | OWASP Top 10 against the backend; DLL hijacking | (web tooling) |
+
+**Hardcoded credential extraction (example workflow)**
+A binary from an exposed share (e.g. `Restart-OracleService.exe` in NETLOGON):
+```text
+1. Run it while Process Monitor watches  → it drops a temp batch + monta.ps1 + a .txt
+2. Lock the Temp folder perms so dropped files aren't deleted, then grab them
+3. The PS script decodes the .txt into a .NET exe
+4. Dump memory of that exe (x64dbg), run strings on the dump, de4dot + dnSpy to read the .NET source → hardcoded creds
+```
+```bash
+strings64.exe <dump>.bin          # pull strings from memory dump
+de4dot <dump>.bin                 # clean/deobfuscate .NET
+Get-EventLog -LogName Application -Newest 50   # app logs for debugging
+```
+
+**Web vulns in 3-tier thick clients**
+```bash
+# capture + filter traffic
+sudo tcpdump -i eth0 -w capture.pcap
+tshark -r capture.pcap -T fields -e http.request.uri
+# extract + decompile Java client
+jar -xvf fatty-client.jar
+jd-gui fatty-client.jar          # (or JADX / dnSpy for .NET)
+# redirect client to my server for testing
+echo "<MY_IP> server.local" | sudo tee -a /etc/hosts
+```
+- **Path traversal** test payloads: `../../../etc/passwd`, `..\..\..\windows\system32\drivers\etc\hosts`
+- **SQLi** test payloads: `' OR '1'='1' -- ` (auth bypass), `' UNION SELECT username,password FROM users -- ` (destructive payloads like DROP are never used on real targets)
+
+**Remediation:** input validation, strong auth, TLS for all comms, no hardcoded secrets, obfuscation, patching.
+
+> Thick clients hide secrets in the binary and on the wire. The two highest-value moves: run Process Monitor while the app works to catch dropped files, and intercept its traffic — creds are usually in one or the other.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
