@@ -169,9 +169,9 @@ CPTS-NOTES/
 
 | Module | Status | Finished |
 |---|---|---|
-| [Penetration Testing Process](01-penetration-testing-process/) | ⬜ | |
-| [Getting Started](02-getting-started/) | ⬜ | |
-| [Network Enumeration with Nmap](03-nmap/) | ⬜ | |
+| [Penetration Testing Process](01-penetration-testing-process/) | 🟨 | |
+| [Getting Started](02-getting-started/) | 🟨 | |
+| [Network Enumeration with Nmap](03-nmap/) | 🟨 | |
 | [Footprinting](04-footprinting/) | ⬜ | |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | ⬜ | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
