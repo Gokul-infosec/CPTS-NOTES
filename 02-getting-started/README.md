@@ -64,6 +64,31 @@ Projects/<Client>/
 
 **My takeaway:** this repo *is* my knowledge base. Next step is to add a findings database to it.
 
+#### Connecting Using VPN
+- **VPN** = encrypted tunnel over a public network into a private one, so my traffic appears to come from the VPN server.
+- **Two remote-access types:**
+  - **SSL VPN**: runs in the browser, no client install. Can be limited to web apps (mail, intranet) or give network access.
+  - **Client-based VPN**: needs client software. Once connected, it's like being on the company network (full access or a remote-worker segment, depending on config).
+- **Commercial VPNs** (NordVPN, PIA, ...) help bypass network restrictions or protect me on hostile Wi-Fi, but they **don't guarantee anonymity** (the provider might log everything), and they never protect anyone from the consequences of illegal activity.
+- **HTB / lab VPNs are hostile networks:** connect only from a VM, no SSH password auth on my attack box, lock down any web servers, keep no sensitive data there, and **never use the same VM for labs and client work**.
+
+**Commands (from the module, not run yet; Pwnbox is already on the lab network so I don't need these there):**
+
+```bash
+# [ATTACK BOX - own VM] connect; success = "Initialization Sequence Completed"
+sudo openvpn user.ovpn
+
+# [ATTACK BOX - own VM, second terminal] check for the tun0 adapter
+ifconfig
+
+# [ATTACK BOX - own VM] see which networks route through the VPN
+netstat -rn
+```
+
+- In the module's example, the Academy target network `10.129.0.0/16` is reached through `tun0` via the `10.10.14.0/23` VPN network.
+
+**My takeaway:** on Pwnbox, the VPN is handled for me. If I ever switch to my own VM, the `.ovpn` file is a credential and stays out of git (`.gitignore` already blocks `*.ovpn`).
+
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
