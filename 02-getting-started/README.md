@@ -29,8 +29,21 @@ From zero to first box: set up an attack distro, learn the common tech and essen
 
 **My takeaway:** severity isn't just technical. It depends on what the business risks and cares about.
 
+#### Getting Started with a Pentest Distro
+- I must be able to set up, maintain and secure both Linux and Windows attack machines. Depending on the job, I might test from a local VM, a cloud box, a VM inside the client network, or a client workstation (insider / assume-breach).
+- No distro has every tool. Over time I'll build a list of must-haves, maybe even a custom VM from a Debian or Ubuntu base.
+- **Fresh VM for every engagement**, so no client data leaks into another client's report and sensitive data isn't kept too long. That means I need a fast, repeatable setup (scripts, documented steps).
+- Setup options: base OS (not recommended), dual boot (slow to switch), or **virtualization** (best). Hypervisors: VirtualBox, VMware Workstation (now free), Hyper-V, or bare-metal Proxmox / ESXi. VMs isolate my real network from vulnerable labs and client networks (VM breakouts do exist, though).
+- A home lab is worth building: reproduce vulns, test remediations, practice new techniques safely.
+- Pwnbox is Parrot-based. Local options are the **ISO** (install yourself, more customization) or the **OVA** (prebuilt appliance: OVF hardware settings + VMDK disk, quickest to deploy).
+- Academy targets: Docker instances work without VPN. Some hosts (e.g. AD targets) need the VPN key when not using Pwnbox.
+
+**My setup:** HTB Pwnbox (unlimited time).
+
+**My takeaway:** a clean VM per client and a repeatable build process are professional basics, not extras.
+
 ## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
+- Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
 
 ## 3. Commands I used
