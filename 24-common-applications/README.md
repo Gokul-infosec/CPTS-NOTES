@@ -723,6 +723,41 @@ Methodology beats memorizing tools: enumerate thoroughly (EyeWitness for visual 
 
 > The through-line of this whole module: **default creds + a built-in "execute/upload" feature = RCE**, on almost every app. Check creds and CVEs first, every time.
 
+### Application Hardening (remediation reference)
+Defensive side of this whole module — reuse these for the remediation section of reports (module 27).
+
+**The big levers (fix these first):**
+- **Default creds** — change/disable every default admin account; this is the #1 risk across the module.
+- **Limit internet exposure** — minimize externally reachable apps; restrict login/admin pages by IP.
+- **Patch promptly** — most module CVEs are version-specific; keep apps + dependencies current.
+- **Least privilege** everywhere; strong passwords + MFA.
+
+**General controls:** strict access control + file/folder perms; disable code-exec features (e.g. WP PHP editing); WAF + security monitoring; regular off-box backups; AD/LDAP SSO for central auth/audit.
+
+**App-specific quick fixes:**
+| App | Harden |
+|---|---|
+| WordPress | security plugin (Wordfence); disable file editor |
+| Joomla | secret-key admin login (AdminExile) |
+| Drupal | hide/move the admin login |
+| Tomcat | Manager/Host-Manager to localhost + IP whitelist |
+| Jenkins | Matrix Authorization Strategy; lock the script console |
+| Splunk / PRTG | change default password; keep updated |
+| osTicket | limit internet access |
+| GitLab | sign-up + domain restrictions; enforce 2FA |
+
+**Defensive domains (secure-SDLC checklist):**
+- **Config mgmt:** no plaintext secrets; env vars; access-controlled config files; IaC under version control + review
+- **Input/output:** validate (whitelist) all input; context-aware output encoding (XSS)
+- **Sessions:** strong random IDs, timeouts, HSTS, `Secure` + `HttpOnly` cookies
+- **Errors/logging:** no sensitive data in errors; custom error pages; comprehensive, protected security logs + monitoring
+- **Dependencies:** SCA for third-party libs; trusted supply chain
+- **Database:** least privilege, parameterized queries/stored procs, encryption at rest + in transit
+- **Network:** strict firewall rules, IDS/IPS, segmentation to isolate sensitive apps
+- **People/process:** secure-coding + user training; tested incident-response plan; regular assessments + pentests
+
+> Mirror image of the attacks in this module: I broke in via default creds + exposed admin + a built-in exec feature + an unpatched CVE, so hardening closes exactly those. That symmetry is what makes a report finding actionable — every "how I got in" maps to a "here's the fix".
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
