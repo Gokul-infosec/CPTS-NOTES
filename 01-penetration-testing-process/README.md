@@ -210,6 +210,27 @@ The cornerstone of the whole test and the stage I return to most. Every exploit 
 - For every service, ask *why is this here?* The purpose points to the attack.
 - Internal = where the lazy configs are.
 
+#### Sections 9 to 14
+To be added in my own words.
+
+#### Practice
+- Theory is useless without hands-on reps. Communication counts just as much: clear emails, presenting and defending my work, solid reports.
+- Practice the client-facing parts too: role-play kickoff calls and report walkthroughs with a friend, and be ready to defend every recommendation on the spot.
+- A thin report kills credibility. Every claim needs clear evidence, solid repro steps, clear remediation, and a well-written executive summary.
+
+**Practice plan (starting example):** 2 modules → 3 retired machines → 5 active machines → 1 Pro Lab / Endgame
+
+| Stage | How to do it |
+|---|---|
+| Modules | Read, do the exercises, finish. Then **redo the exercises from scratch taking notes**, and write technical *and* non-technical documentation (sample finding + exec summary entry). |
+| Retired machines (2 easy + 1 medium) | User and root on my own → write tech and non-tech docs → compare with a write-up → list what I missed → watch IppSec → update my notes. |
+| Active machines (2 easy + 2 medium + 1 hard) | Blackbox: no write-ups. User and root → tech and non-tech docs → get them proofread by a technical *and* a non-technical person. |
+| Pro Lab / Endgame | Multi-host enterprise networks: hosts interacting, user-traffic attacks, full attack chain write-up from foothold to network compromise. |
+
+**My takeaways:**
+- Writing client-ready docs after every module/box is what makes the knowledge stick.
+- Go through modules in order. If already partway through, revisit them with the 8-stage process in mind.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
@@ -234,7 +255,7 @@ Each block says which machine it ran on.
 - 
 
 ## 6. Open questions / revisit
-- 
+- Write my own notes for sections 9 to 14 (vulnerability assessment through lateral movement / PoC / post-engagement detail)
 
 ## 7. Cheat sheet lines
 Copied into `cheatsheets/`:
