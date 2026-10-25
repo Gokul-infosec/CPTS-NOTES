@@ -134,6 +134,65 @@ Every country has its own laws on unauthorized access, data protection, intercep
 - A finding alone is weak. A *chain* (initial access → privesc → lateral → crown jewels) shows real impact.
 - Two audiences for every report: technical teams need repro steps, management needs risk.
 
+#### Pre-Engagement
+Three parts: **scoping questionnaire → pre-engagement meeting → kick-off meeting**. An NDA comes before all of them.
+
+**NDA types:**
+- **Unilateral:** only one party must keep things confidential
+- **Bilateral:** both parties do. Most common, and the one that protects pentesters.
+- **Multilateral:** more than two parties (e.g. a cooperative network where every member must sign)
+
+**Who can hire me:** only someone with real authority, usually C-level (CEO, CTO, CISO, CSO, CRO, CIO), VP / manager of internal audit, or VP / director of IT or security. In big companies it's usually IT, audit or security senior management. If a random employee hires me without authority, *I'm* the one in legal trouble. Confirm early who signs the contract and RoE, and who the primary, secondary, technical and escalation contacts are.
+
+**Documents and when they're made:**
+
+| Document | When |
+|---|---|
+| NDA | After initial contact |
+| Scoping questionnaire | Before the pre-engagement meeting |
+| Scoping document | During the pre-engagement meeting |
+| Proposal / Contract / Scope of Work (SoW) | During the pre-engagement meeting |
+| Rules of Engagement (RoE) | Before kick-off |
+| Contractor's agreement (physical tests only) | Before kick-off |
+| Reports | During and after testing |
+
+All of these should be reviewed by a lawyer. If the client sends its own scope list (IPs, URLs, creds), it also goes into the RoE as an appendix.
+
+**Scoping questionnaire.** The client picks the service: internal/external VA or pentest, wireless, application, web app, physical, social engineering, red team. Then I need sizing details:
+- Live hosts, IP / CIDR ranges, domains / subdomains, SSIDs
+- Number of web / mobile apps, and how many user roles if testing is authenticated
+- Phishing: how many users, and does the client give the list or do I build it with OSINT?
+- Physical: how many sites, and how spread out?
+- Red team objective and what's off limits
+- Separate AD assessment? Starting as an anonymous user or a domain user? NAC bypass needed?
+- Black / grey / white box, and evasiveness: non-evasive, hybrid (start quiet, get louder to find the detection point), or fully evasive
+
+This drives the people assigned, the timeline and the price (10 external IPs ≪ 30 internal /24s). The answers get summarized into the scoping document.
+
+**Pre-engagement meeting → contract.** Topics that feed the SoW:
+- NDA, goals (big first, then smaller milestones), scope (legal basis comes first), test type (I recommend, client decides)
+- Methodology (e.g. OSSTMM, OWASP), location (remote VPN or on site), time windows per phase, in or out of business hours
+- Third parties: the client must get written consent from cloud / ISP / hosting providers, and I should ask for a copy as proof
+- Evasive testing yes/no, risks explained, critical systems to avoid, information-handling standards (HIPAA, PCI, HITRUST, FISMA/NIST)
+- Contact list with escalation order, communication channels, reporting format and presentation, payment terms
+- The key point: find the client's priorities and deliver what *they* ordered, not what I think is better.
+
+**RoE contents (condensed):** who's involved and their contacts, purpose and goals, exact scope (IPs, domains, URLs, CIDRs), communication channels, dates and time of day, test type and location, methodology (OSSTMM, PTES, OWASP), objectives / flags, evidence and information handling (encryption), system backups, incident handling and when testing is interrupted, status meeting schedule, reporting, retest dates, liability disclaimers (damage, data loss), and signed permission to test.
+
+**Kick-off meeting.** After all documents are signed. Attendees: client PoCs and technical staff, plus our team (practice lead, testers, sometimes a PM or sales).
+- Usually **no DoS testing**.
+- **Critical finding on an external test** (unauth RCE, SQLi, sensitive data exposure): pause testing, send a vulnerability notification, call the emergency contacts so the client can decide on an emergency fix.
+- **Internal test is stopped only if:** a system goes unresponsive, I find illegal activity (e.g. illegal content on a share), or I find signs of a real attacker / prior breach.
+- Warn the client about risks: lots of logs and alerts, accounts may lock from brute forcing, and they must call me immediately if the network is affected.
+- Explain things so the *least* technical person in the room can follow.
+
+**Contractor's agreement (physical tests).** Different laws apply to physical intrusion, and staff usually don't know about the test. If I get caught and the police are called, this document is my "get out of jail free card". It covers: purpose, goal, testers and contacts, physical addresses, building names, floors, room IDs, physical components, timeline, notarization and permission to test.
+
+**My takeaways:**
+- The *right person* has to authorize the test, not just anyone at the company.
+- Know the pause-and-notify rules (external critical finding vs internal stop conditions). That's a classic scenario question.
+- For physical tests, always carry the signed contractor's agreement.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
