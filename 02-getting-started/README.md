@@ -149,6 +149,37 @@ Ports to know instantly (goal: recognize from the number alone):
 
 **My takeaway:** know both lists for interviews, and say which version you mean.
 
+#### Service Scanning (command reference)
+Goal of the section: identify the OS and running services, then look for misconfigured or outdated ones. Ports 1-1023 = well-known/privileged. Default Nmap scans top 1000 TCP ports only.
+
+| Command | What it does |
+|---|---|
+| `nmap <target>` | Default: top 1000 TCP ports |
+| `nmap -sV -sC -p- <target>` | Version detection + default scripts + all 65535 TCP ports |
+| `nmap -A -p<port> <target>` | Aggressive: version, scripts, OS guess, traceroute |
+| `nmap --script <name> -p<port> <target>` | Run a specific NSE script (scripts live in `/usr/share/nmap/scripts/`) |
+| `nmap -sV --script=banner -p<port> <target>` | Banner grab via Nmap |
+
+- `-sC` = default scripts, `-sV` = version/fingerprint, `-p-` = all ports, `-A` = aggressive. More flags/scripts slow the scan down a lot.
+- STATE can be `open` / `closed` / `filtered` (filtered often = firewall).
+- Version strings help guess the OS (e.g. an Ubuntu OpenSSH package version maps to a specific release), but it's not fully reliable since newer packages can run on older OSes.
+
+**Per-service quick reference:**
+
+| Service | Port | Tooling from this section |
+|---|---|---|
+| Banner grab | any | `nc -nv <target> <port>` |
+| FTP | 21 | `ftp -p <target>` → `ls`, `cd`, `get <file>`; watch for anonymous login |
+| SMB | 139/445 | `nmap --script smb-os-discovery.nse -p445 <target>`; `smbclient -N -L \\<target>` (list shares), `smbclient -U <user> \\<target>\<share>` |
+| SNMP | 161/UDP | `snmpwalk -v 2c -c public <target>`; `onesixtyone -c dict.txt <target>` (brute community strings) |
+
+- SMB can expose sensitive files in shares and older versions may be RCE-vulnerable (e.g. EternalBlue on legacy Windows). `-N` suppresses the password prompt.
+- SNMP v1/v2c use a plaintext community string (`public`/`private` are common defaults); v3 added auth/encryption.
+
+> Commands above are from the module. They move to `cheatsheets/` once I've actually run them in the lab.
+
+**My takeaway:** default Nmap misses a lot (top 1000 only). Always confirm with a `-p-` pass, then `-sV -sC` on the open ports.
+
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
