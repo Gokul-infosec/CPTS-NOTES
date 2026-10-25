@@ -541,6 +541,45 @@ After login (default/weak creds), **Setup → Account Settings → Notifications
 
 > Pattern across monitoring tools (Splunk, PRTG, Nagios…): they run with high privilege and have a legitimate "run a script/command" feature. Get in with default creds → abuse that feature → SYSTEM/root. Default creds + patch level are the whole game.
 
+### osTicket — enumeration (reference)
+Support-desk app. Value is the **information** it leaks, not usually a direct RCE.
+
+**Identify:** `OSTSESSID` cookie, "powered by osTicket" in the footer; EyeWitness to spot it across a subdomain sweep.
+
+**Technique**
+- OSINT creds (e.g. Dehashed) → test against the portal and other services (credential reuse).
+- **Create a ticket to harvest an internal email** (e.g. `940288@inlanefreight.local`), then use that address to register for other company services (Slack, GitLab, etc.) — a foothold-chaining trick.
+- Read tickets for password resets, internal configs, usernames/emails.
+- Known CVEs by version (Exploit-DB): e.g. **CVE-2020-24881** SSRF in osTicket 1.14.1 (internal port scan / reach internal resources).
+- Social engineering support staff for process/system details.
+
+**Remediation:** minimize externally exposed apps, MFA on portals, strong password policy, staff phishing/SE awareness.
+
+### GitLab — discovery, enum & attacking (reference)
+**Discovery:** the GitLab login page gives it away. Version is on `/help` (needs auth).
+
+**Enumeration**
+- `/explore` — **public projects** often contain API scripts, config secrets, SSH private keys, source to review.
+- `/users/sign_up` — if registration is open, register to reach **internal** projects; also a **user/email enum** oracle ("Email/Username has already been taken").
+- Logged in: re-check `/explore`, use **search** for `password`/`api_key`/tokens, browse **groups** and **snippets**.
+- Test OSINT creds (credential reuse).
+
+**Attacking**
+```bash
+# username enumeration (automated)
+python3 gitlab_userenum.py -u http://<HOST>:8081/ -l users.txt
+```
+- **Password spraying** after enum — mind the lockout policy (default 10 fails → 10-min lock); go slow/distributed.
+- **ExifTool RCE — CVE-2021-22205** (GitLab CE ≤ 13.10.2; unauthenticated on < 13.10.3 in many setups). Malicious image metadata is processed by ExifTool → RCE. Public exploit:
+```bash
+python3 gitlab_13_10_2_rce.py -t http://<HOST>:8081 -u <user> -p <pass> -c '<command>'
+# reverse-shell payload goes in -c; not stored here — use a listener/msfvenom and note it in the report
+```
+
+**Security notes / remediation:** 2FA is **off by default** (risk) — enforce it; Fail2Ban for brute force; IP-restrict external access; limit registration to company domains + admin approval; patch to a fixed version for CVE-2021-22205.
+
+> GitLab pattern: scrape public/internal repos for secrets (SSH keys, tokens, hardcoded creds) → that often gives access elsewhere before you even need the RCE. Repos are a loot goldmine.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
