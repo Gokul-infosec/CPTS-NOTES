@@ -25,6 +25,29 @@ The big picture of a pentest: the phases, how every later module fits into them,
 - Document everything and over-communicate.
 - Legal practice outside HTB: bug bounty programs (each has its own scope and rules, and many ban automated scanning).
 
+#### Academy Modules Layout
+- Pentesting is like learning guitar: knowing the theory means nothing without hands-on reps. Analytical skill ("question everything") comes from practice, not one module.
+- You can't attack what you don't understand. Deep knowledge of Linux, Windows, networking, web and AD makes the job easier.
+
+**The 8 stages and where each one can lead (it's a loop, not a straight line):**
+
+| Stage | What happens | Where I go next |
+|---|---|---|
+| Pre-Engagement | Scope, limits, contracts, agreements in writing | Information Gathering (only option) |
+| Information Gathering | Find the targets, often starting from just a domain or IP range. Detailed notes. | Vulnerability Assessment |
+| Vulnerability Assessment | Automated scans for known vulns, plus manual analysis connecting the dots | Exploitation (no access yet) · Post-Exploitation (on a box) · Lateral Movement (on a box) · back to Info Gathering (not enough info) |
+| Exploitation | Attack based on what I found. Same app, different configs per company. | Info Gathering on the new host · Post-Exploitation · Lateral Movement (e.g. dual-homed host) · PoC (e.g. Domain Admin) |
+| Post-Exploitation | Pillage the box first (mandatory), then escalate privileges | Exploitation of local services · Lateral Movement · PoC |
+| Lateral Movement | Use access to reach other hosts or subnets. Admin not always needed. | Vulnerability Assessment · Pillaging again · PoC |
+| Proof-of-Concept | Proof the vuln exists so admins can reproduce it before changing business-critical systems. Can be automated (e.g. Python). | Post-Engagement (only option) |
+| Post-Engagement | Clean up everything I uploaded (e.g. no open bind shells left behind). Log every change, exploit, captured cred and uploaded file in the report appendix so the client can match alerts to my testing. Reconcile notes and deliver the report. | End |
+
+**My takeaways:**
+- Biggest beginner mistake: jumping straight to exploitation. Thorough enumeration first saves time on a time-boxed test.
+- When stuck, go back a stage. Usually it's an information gathering gap.
+- Fixes take time and money because of system dependencies, so a clear, reproducible PoC is what gets a finding fixed.
+- Cleanup and documenting my own actions are part of the job, not optional extras.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
