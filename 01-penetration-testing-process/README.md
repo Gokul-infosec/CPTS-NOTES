@@ -48,6 +48,41 @@ The big picture of a pentest: the phases, how every later module fits into them,
 - Fixes take time and money because of system dependencies, so a clear, reproducible PoC is what gets a finding fixed.
 - Cleanup and documenting my own actions are part of the job, not optional extras.
 
+#### Penetration Testing Overview
+- **Pentest:** an authorized, targeted attack using real attacker techniques to measure the impact of vulns (or chains of vulns) on confidentiality, integrity and availability. Goal: find *all* vulns in scope.
+- **Red team vs pentest:** a red team is scenario-based and only uses what it needs to hit one objective (e.g. read the CEO's inbox). A pentest tries to cover everything.
+- **Vulnerability assessment vs pentest:** a VA is purely automated scanning (Nessus, Qualys, OpenVAS) against known issues and can't adapt to the target's config. A pentest is manual info gathering plus automated and manual testing, tailored to the target.
+- **Risk management:** companies can accept, transfer (insurance, contracts), avoid or mitigate risk. Some inherent risk always remains, even with good controls.
+- **My role:** report vulns, reproduction steps and remediation advice. I don't patch or change code; fixing is the client's job.
+- **A pentest is a point-in-time snapshot, not monitoring.** The report should say so.
+- **Authorization:** written approval is mandatory, and a client can only authorize testing of assets *they own*. Third-party hosting may need its own written approval (AWS allows some services without prior approval, but it varies by provider), so confirm asset ownership during scoping.
+- **Sensitive data found during testing** (PII, salaries, card data) stays private. Recommend changing creds and encrypting the data.
+- Employees usually aren't told about the test, though managers may choose to.
+
+**Perspective:**
+
+| | Where I test from | Notes |
+|---|---|---|
+| External | Internet, as an anonymous attacker (own host over VPN, or a VPS) | Client may want noisy, stealthy, or "hybrid" (gradually noisier to test detection). Goal: compromise external hosts, get sensitive data, or reach the internal network. |
+| Internal | Inside the corporate network | After an external breach or from an assumed-breach start. Air-gapped systems may need me on site. |
+
+**Type (how much info I get):**
+
+| Type | Info given |
+|---|---|
+| Blackbox | Minimal: just IPs / domains. Slowest, lots of recon. |
+| Greybox | Extended: specific URLs, hostnames, subnets |
+| Whitebox | Everything: configs, admin creds, source code |
+| Red teaming | Can add physical testing and social engineering. Combines with any type above. |
+| Purple teaming | Works closely with the defenders. Combines with any type above. |
+
+**What can be tested:** network, web apps, mobile, APIs, thick clients, IoT, cloud, source code, physical security, employees, hosts, servers, security policies, firewalls, IDS/IPS. Often mixed in one engagement.
+
+**My takeaways (interview questions straight from this section):**
+- Pentest vs vulnerability assessment vs red team: know the difference cold.
+- Black / grey / white box and internal vs external.
+- Always confirm the client actually owns what's in scope, especially cloud and third-party hosted assets.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
