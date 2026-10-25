@@ -467,6 +467,43 @@ Persistence via planted job/JSP under `/var/lib/jenkins/jobs/` — I don't store
 
 > Jenkins = fast RCE: default creds → Script Console → shell as the build user, then loot `credentials.xml` for pivoting into whatever the CI connects to (often the juiciest part).
 
+### Jenkins — attacking (expanded)
+
+**Script Console RCE via `scriptText`** (the primary path). With creds, POST Groovy to run commands as the Jenkins user:
+```bash
+# prove RCE (benign)
+curl -X POST -u <u>:<p> --data-urlencode "script=println 'id'.execute().text" http://<HOST>:8080/scriptText
+# Windows equivalent
+curl -X POST -u <u>:<p> --data-urlencode "script=println 'cmd /c whoami'.execute().text" http://<HOST>:8080/scriptText
+```
+A full interactive/reverse shell is trivial from here — I don't store the payload; go via a listener/`msfvenom` and note it in the report. Fix: restrict `/script`, enforce RBAC.
+
+**Plugin CVEs** — enumerate plugins, map versions to CVEs. Example: *Pipeline: Groovy* CVE-2019-10352 (arbitrary code/file read). Vulnerable plugins are a top Jenkins vector.
+
+**Credential extraction**
+```bash
+curl -u <u>:<p> http://<HOST>:8080/credentials/store/system/domain/_/
+cat /var/lib/jenkins/credentials.xml      # with shell access; decrypt with master.key + hudson.util.Secret
+```
+
+**Jobs / pipelines** — create or modify a job/pipeline to run commands (`create-job`, `build` via jenkins-cli). Build steps run on agents, so this is also a privesc/lateral path.
+
+**SSRF via Groovy** — the script console can open connections to internal services (`url.toURL().openConnection()`), reaching things the attacker can't hit directly. Useful for internal recon / cloud metadata.
+
+**Agents/slaves (port 50000)** — misconfigured or high-privilege agents let you reach the master or run as a higher-privileged user. Check agent auth and comms.
+
+**Persistence** — Script Console can create accounts or weaken the security realm for future access. I note the technique rather than store the payload; always document persistence changes for cleanup.
+
+**CSRF / auth bypass** — Jenkins has CSRF crumbs, but misconfigs allow bypass (Referer/token manipulation); also check anonymous access and default creds.
+
+**Hardening (for the remediation section of my report)**
+- Update Jenkins + all plugins regularly
+- Restrict the script console; enforce strong auth + RBAC (matrix authorization)
+- MFA, strong passwords, network segmentation, least privilege for agents
+- Regular security audits
+
+> Takeaway: enumerate plugins → check default/anon access → Script Console = RCE → loot `credentials.xml` → pivot via stored creds. Agents extend the blast radius.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
