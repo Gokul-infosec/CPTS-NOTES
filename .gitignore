@@ -1,0 +1,11 @@
+# Never commit these
+*.ovpn
+loot/
+flags*
+*.kirbi
+*.ccache
+*.hash
+hashes*
+*.pcap
+*.zip
+.DS_Store

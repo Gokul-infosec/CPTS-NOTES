@@ -122,15 +122,84 @@ My general penetration testing workflow:
 
 ## 📂 Repository Structure
 
+One folder per module, in path order. Every module note follows the same layout: goal, commands (labelled by machine), what worked, what failed and why, open questions, and cheat sheet lines.
+
 ```text
 CPTS-NOTES/
 │
-├── 01-Enumeration/
-├── 02-Web-Pentesting/
-├── 03-Exploitation/
-├── 04-Privilege-Escalation/
-├── 05-Active-Directory/
-├── 06-Post-Exploitation/
-├── 07-Pivoting/
-├── 08-Reporting/
-└── Cheatsheets/
+├── 00-methodology/        ← my end-to-end pentest workflow
+├── 01-penetration-testing-process/
+├── 02-getting-started/
+├── 03-nmap/
+├── 04-footprinting/
+├── 05-web-info-gathering/
+├── 06-vulnerability-assessment/
+├── 07-file-transfers/
+├── 08-shells-payloads/
+├── 09-metasploit/
+├── 10-password-attacks/
+├── 11-attacking-common-services/
+├── 12-pivoting-tunneling/
+├── 13-active-directory/
+├── 14-web-proxies/
+├── 15-ffuf/
+├── 16-login-brute-forcing/
+├── 17-sqli-fundamentals/
+├── 18-sqlmap/
+├── 19-xss/
+├── 20-file-inclusion/
+├── 21-file-upload/
+├── 22-command-injection/
+├── 23-web-attacks/
+├── 24-common-applications/
+├── 25-linux-privesc/
+├── 26-windows-privesc/
+├── 27-documentation-reporting/
+├── 28-attacking-enterprise-networks/
+├── cheatsheets/           ← verified commands grouped by phase
+└── templates/             ← note layout every module follows
+```
+
+> No flags, lab answers, or copied course content are published here, in line with HTB's terms.
+
+---
+
+## 📈 Progress
+⬜ Not started · 🟨 In progress · ✅ Done
+
+| Module | Status | Finished |
+|---|---|---|
+| [Penetration Testing Process](01-penetration-testing-process/) | ⬜ | |
+| [Getting Started](02-getting-started/) | ⬜ | |
+| [Network Enumeration with Nmap](03-nmap/) | ⬜ | |
+| [Footprinting](04-footprinting/) | ⬜ | |
+| [Information Gathering - Web Edition](05-web-info-gathering/) | ⬜ | |
+| [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
+| [File Transfers](07-file-transfers/) | ⬜ | |
+| [Shells & Payloads](08-shells-payloads/) | ⬜ | |
+| [Using the Metasploit Framework](09-metasploit/) | ⬜ | |
+| [Password Attacks](10-password-attacks/) | ⬜ | |
+| [Attacking Common Services](11-attacking-common-services/) | ⬜ | |
+| [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | ⬜ | |
+| [Active Directory Enumeration & Attacks](13-active-directory/) | ⬜ | |
+| [Using Web Proxies](14-web-proxies/) | ⬜ | |
+| [Attacking Web Applications with Ffuf](15-ffuf/) | ⬜ | |
+| [Login Brute Forcing](16-login-brute-forcing/) | ⬜ | |
+| [SQL Injection Fundamentals](17-sqli-fundamentals/) | ⬜ | |
+| [SQLMap Essentials](18-sqlmap/) | ⬜ | |
+| [Cross-Site Scripting (XSS)](19-xss/) | ⬜ | |
+| [File Inclusion](20-file-inclusion/) | ⬜ | |
+| [File Upload Attacks](21-file-upload/) | ⬜ | |
+| [Command Injections](22-command-injection/) | ⬜ | |
+| [Web Attacks](23-web-attacks/) | ⬜ | |
+| [Attacking Common Applications](24-common-applications/) | ⬜ | |
+| [Linux Privilege Escalation](25-linux-privesc/) | ⬜ | |
+| [Windows Privilege Escalation](26-windows-privesc/) | ⬜ | |
+| [Documentation & Reporting](27-documentation-reporting/) | ⬜ | |
+| [Attacking Enterprise Networks](28-attacking-enterprise-networks/) | ⬜ | |
+
+---
+
+## 👤 Author
+
+**Gokulnath D** · [LinkedIn](https://linkedin.com/in/gokulcyber) · [GitHub](https://github.com/Gokul-infosec)
