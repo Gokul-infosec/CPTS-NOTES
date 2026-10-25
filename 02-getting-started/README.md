@@ -89,6 +89,66 @@ netstat -rn
 
 **My takeaway:** on Pwnbox, the VPN is handled for me. If I ever switch to my own VM, the `.ovpn` file is a credential and stays out of git (`.gitignore` already blocks `*.ovpn`).
 
+#### Common Terms
+**Shell:** the program that passes my input to the OS (bash on most Linux, plus sh, zsh, ksh, fish; cmd.exe / PowerShell on Windows). "Getting a shell" = interactive command access on a target, through a web/service vuln or valid creds.
+
+| Shell type | How it works |
+|---|---|
+| Reverse | Target connects back to a listener on my attack box |
+| Bind | Target listens on a port; I connect to it |
+| Web | OS commands through the browser, usually not (or only semi-) interactive, e.g. an uploaded PHP script |
+
+**Port:** a software endpoint tied to a service, managed by the OS, so different traffic types (SSH vs web) land in the right place. Services *can* run on non-standard ports.
+- **TCP:** connection-oriented, handshake first, reliable.
+- **UDP:** connectionless, no handshake, no delivery guarantee. Good for time-sensitive traffic where dropping beats waiting.
+- 65,535 ports each for TCP and UDP.
+
+Ports to know instantly (goal: recognize from the number alone):
+
+| Port | Service |
+|---|---|
+| 20/21 TCP | FTP |
+| 22 TCP | SSH |
+| 23 TCP | Telnet |
+| 25 TCP | SMTP |
+| 80 TCP | HTTP |
+| 88 | Kerberos |
+| 161 UDP (also TCP) | SNMP |
+| 389 TCP/UDP | LDAP |
+| 443 TCP | HTTPS |
+| 445 TCP | SMB |
+| 3389 TCP | RDP |
+
+**Web server:** the back-end app handling HTTP(S) on 80/443. It's internet-facing with a huge attack surface, so a web app vuln can lead to the whole server.
+
+**OWASP Top 10:** the standard list of the most critical web app risk categories, and the usual starting point for web assessments (not exhaustive). The module teaches the **2021** list:
+
+1. Broken Access Control
+2. Cryptographic Failures
+3. Injection (SQLi, command injection, LDAP injection, ...)
+4. Insecure Design
+5. Security Misconfiguration
+6. Vulnerable and Outdated Components
+7. Identification and Authentication Failures
+8. Software and Data Integrity Failures (e.g. untrusted plugins / CDNs)
+9. Security Logging and Monitoring Failures
+10. Server-Side Request Forgery (SSRF)
+
+**Update (not in the module): OWASP Top 10 2025**, released Nov 11, 2025:
+
+1. Broken Access Control (now includes SSRF)
+2. Security Misconfiguration
+3. Software Supply Chain Failures (replaces Vulnerable and Outdated Components, wider scope)
+4. Cryptographic Failures
+5. Injection
+6. Insecure Design
+7. Authentication Failures
+8. Software or Data Integrity Failures
+9. Logging & Alerting Failures
+10. Mishandling of Exceptional Conditions (new: race conditions, incomplete transactions, data leaked in error messages)
+
+**My takeaway:** know both lists for interviews, and say which version you mean.
+
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
