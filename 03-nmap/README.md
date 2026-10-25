@@ -102,6 +102,28 @@ Use Nmap to discover live hosts, open ports, services, versions and the OS, and 
 - Save everything with `-oA` so you can grep/parse later (`grep open`, `xsltproc`, `nmaptocsv`).
 - `--script vuln` or `-sV --script vulners` for known-CVE checks against detected versions.
 
+## 3b. Practical scan recipes
+
+```text
+nmap -sn <ip>                                   # host discovery only, no port scan
+nmap -sn -PS <ip>                               # SYN ping sweep
+nmap -sn -PA <ip>                               # ACK ping (hosts behind ICMP-blocking FW)
+nmap -T4 -sS -p- <ip>                           # full SYN scan, aggressive timing
+nmap -sC -sV --script=<name> -p- -T4 <ip>       # scripts + version on all ports
+nmap -Pn -sA -p- <ip>                           # ACK scan: map filtered vs unfiltered (firewall)
+nmap -Pn -sS -sV -p- --data-length 200 -D <gw>,<gw> <ip>   # decoy scan + packet padding
+nmap -Pn -n -sS -p- -T4 <ip>                    # stealth SYN, all ports, no DNS
+```
+
+### Extra flags worth knowing
+- **Host/network discovery:** `-PE` ICMP echo ping · `--disable-arp-ping`
+- **Packet handling:** `--packet-trace` (show every packet) · `--reason` (why a port got its state)
+- **Stealth/spoofing:** `-D RND:5` (5 random decoys) · `-S <IP>` (source IP) · `-e tun0` (send via interface) · `--source-port 53` (fixed source port, e.g. to look like DNS)
+- **Timing:** `--host-timeout 5s` · `--scan-delay 5s` · `--initial-rtt-timeout 50ms` · `--max-rtt-timeout 100ms`
+- **Output:** `-oN` normal · `-oX` XML · `-oG` grepable · `-oA <base>` all three
+
+> Note: faster scans (`-T4/-T5`, high `--min-rate`) finish quicker but are louder to an IDS; slow scans (`-T0/-T1`, `--scan-delay`) are for evasion. Decoy/spoof/source-port tricks are evasion techniques — scope + approval only.
+
 ## 4. Commands I ran (lab)
 Filled in once I run these on Pwnbox, with real IPs as `<TARGET_IP>`.
 
