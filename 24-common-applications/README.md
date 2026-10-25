@@ -504,6 +504,43 @@ cat /var/lib/jenkins/credentials.xml      # with shell access; decrypt with mast
 
 > Takeaway: enumerate plugins → check default/anon access → Script Console = RCE → loot `credentials.xml` → pivot via stored creds. Agents extend the blast radius.
 
+### Splunk — discovery, enum & attacking (reference)
+Ports: **8000** (web UI), **8089** (REST API / splunkd). Often runs as **root/SYSTEM** — compromise = high privilege + access to all ingested logs (frequently full of creds).
+
+**Discovery / enum**
+```bash
+sudo nmap -sV -p8000,8089 <HOST>          # Splunkd httpd
+# web UI: http://<HOST>:8000  — no login prompt may mean Splunk Free (no auth)
+curl -k -u admin:changeme https://<HOST>:8089/services/server/info    # default creds on old versions
+```
+- Default/weak creds: `admin:changeme` (older), plus the usual weak ones.
+- REST API (8089) is a strong enum surface; log search API can pull indexed data (often credentials/network info).
+- Brute force (scope+approval): `hydra ... http-form-post "/en-US/account/login:username=^USER^&password=^PASS^:Invalid"`.
+
+**RCE via scripted inputs (the Splunk attack)**
+Splunk apps can define *scripted inputs* that execute a script (bash/PowerShell/Python) on a schedule. An attacker who can install an app — admin rights, or an unauthenticated **Splunk Free** / exposed deployment server — gets code execution as the Splunk user. Deploy via **Apps → Install app from file**, or drop into `$SPLUNK_HOME/etc/deployment-apps/` on a deployment server and restart.
+- I don't store the malicious-app payloads (rev shells / inputs.conf) in this repo.
+- Also abusable: **forwarders** (push a malicious input to many hosts = lateral movement), hijacked **session cookies** (`splunkd_8000`) replayed via curl, and **SSRF** through splunkd data inputs (e.g. reaching `169.254.169.254` cloud metadata).
+- **Remediation:** don't run Splunk as root; restrict app install + deployment-server access; change default creds; network-segment 8089; monitor `deployment-apps`.
+
+### PRTG Network Monitor — CVE-2018-9276 (reference)
+Authenticated OS command injection in PRTG (vulnerable **< 18.2.39**). PRTG service runs as SYSTEM, so injection = SYSTEM.
+
+**Discovery**
+```bash
+sudo nmap -sV -p- --open -T4 <HOST>        # port 8080: "Indy httpd ... Paessler PRTG"
+curl -s http://<HOST>:8080/index.htm -A "Mozilla/5.0" | grep -i version
+# EyeWitness often surfaces default creds: prtgadmin:prtgadmin
+```
+
+**The vuln (CVE-2018-9276)**
+After login (default/weak creds), **Setup → Account Settings → Notifications → Add notification → Execute Program**. The *Parameter* field passed to the demo PS1 notification isn't sanitized, so OS commands chained with `;` run as SYSTEM. Trigger with the notification's **Test** button.
+- Typical impact: add a local admin, or a reverse shell. I note the injection point, not the payload.
+- **Verify** the new access: `crackmapexec smb <HOST> -u <user> -p <pass>`, then `evil-winrm` / `psexec.py` / `wmiexec.py`.
+- **Remediation:** patch to ≥ 18.2.39, change default creds, restrict who can edit notifications.
+
+> Pattern across monitoring tools (Splunk, PRTG, Nagios…): they run with high privilege and have a legitimate "run a script/command" feature. Get in with default creds → abuse that feature → SYSTEM/root. Default creds + patch level are the whole game.
+
 ### My notes / lab output
 Filled in once I run this on a target.
 
