@@ -42,6 +42,28 @@ From zero to first box: set up an attack distro, learn the common tech and essen
 
 **My takeaway:** a clean VM per client and a repeatable build process are professional basics, not extras.
 
+#### Staying Organized
+- Clear, accurate documentation from day one. A technical but disorganized tester struggles in this industry.
+- **Folder structure per client, per assessment** (e.g. `EPT` = external, `IPT` = internal):
+
+```text
+Projects/<Client>/
+├── EPT/
+│   ├── evidence/{credentials,data,screenshots}
+│   ├── logs/
+│   ├── scans/
+│   ├── scope/      ← IP / network lists to feed scanners
+│   └── tools/
+└── IPT/  (same layout)
+```
+
+  Some people use one folder per host instead. Pick what fits my workflow.
+- **Note tools:** Cherrytree, VS Code, Evernote, Notion, GitBook, Sublime, Notepad++. On real engagements, keep client data **local only, never cloud-synced**. Learn Markdown (this repo is Markdown).
+- **Knowledge base to maintain:** setup quick-references, per-phase command cheat sheets, every useful payload / command / tip from boxes and courses (HTB gives a cheat sheet per module), checklists, report templates per assessment type.
+- **Findings database:** title, description, impact, remediation, references. Pre-written findings save huge time when reporting; just tailor them to the client.
+
+**My takeaway:** this repo *is* my knowledge base. Next step is to add a findings database to it.
+
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
