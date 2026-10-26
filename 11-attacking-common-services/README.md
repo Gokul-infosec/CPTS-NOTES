@@ -187,8 +187,9 @@ xfreerdp /v:<HOST> /u:<u> /pth:<NT_hash>
 nmap -p53 -Pn -sV -sC <HOST>
 dig AXFR @<nameserver> <domain>         # zone transfer (misconfig = full records)
 fierce --domain <domain>
-subfinder -d <domain> -v                # subdomain enum (also sublist3r, subbrute)
-host <sub> ; nslookup <sub>             # CNAME checks
+subfinder -d <domain> -v                # subdomain enum (also sublist3r)
+./subbrute.py <domain> -s names.txt -r resolvers.txt   # pure DNS brute w/ custom resolvers (internal/no-internet)
+host <sub> ; nslookup <sub>             # CNAME checks (e.g. alias → inlanefreight.s3.amazonaws.com)
 ```
 - **Subdomain takeover:** dangling CNAME → expired third-party service (S3 "NoSuchBucket" etc.); verify with *can-i-take-over-xyz*. Impact: phishing, cookie theft, CORS/CSP abuse.
 - **Cache poisoning / spoofing:** MITM with Ettercap/Bettercap (`etter.dns` + `dns_spoof`).
@@ -206,8 +207,14 @@ smtp-user-enum -M VRFY -U users.txt -D <domain> -t <HOST>
 nmap -p25 -Pn --script smtp-open-relay <HOST>        # open relay
 swaks --from a@x --to b@y --server <HOST>            # send test / relay check
 hydra -L users.txt -P pass.txt <HOST> smtp
-# cloud: o365spray / MailSniper (Office365), enum_google (Workspace)
+# POP3 user enum: telnet <HOST> 110 → USER <name> (+OK = exists)
+# cloud (Office365) — validate → enum → spray:
+python3 o365spray.py --validate --domain <d>
+python3 o365spray.py --enum -U users.txt --domain <d>
+python3 o365spray.py --spray -U found.txt -p '<pass>' --count 1 --lockout 1 --domain <d>
+# also MailSniper (O365), CredKing (Gmail/Okta) — keep them updated, providers change often
 ```
+EXPN on a distribution list (e.g. "all") leaks every member — bigger win than VRFY. Hydra/direct spray against cloud SMTP/POP3/IMAP is usually blocked → use the cloud-specific tools.
 - **Spoofing** via manual `telnet <HOST> 25` (HELO/MAIL FROM/RCPT TO/DATA) when no SPF/DKIM/DMARC.
 - **CVE-2020-7247 (OpenSMTPD)** unauth RCE; **CVE-2021-27211 (Exim)**. OSINT: theHarvester, Shodan, Censys, Amass.
 
