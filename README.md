@@ -174,7 +174,7 @@ CPTS-NOTES/
 | [Network Enumeration with Nmap](03-nmap/) | ✅ | 2026-10-26 |
 | [Footprinting](04-footprinting/) | ✅ | 2026-10-26 |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | ✅ | 2026-10-26 |
-| [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
+| [Vulnerability Assessment](06-vulnerability-assessment/) | ✅ | 2026-10-26 |
 | [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
 | [Shells & Payloads](08-shells-payloads/) | 🟨 | |
 | [Using the Metasploit Framework](09-metasploit/) | ✅ | 2026-10-26 |
