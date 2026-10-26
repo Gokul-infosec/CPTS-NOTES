@@ -186,7 +186,7 @@ CPTS-NOTES/
 | [Attacking Web Applications with Ffuf](15-ffuf/) | ✅ | 2026-10-26 |
 | [Login Brute Forcing](16-login-brute-forcing/) | ✅ | 2026-10-26 |
 | [SQL Injection Fundamentals](17-sqli-fundamentals/) | ⬜ | |
-| [SQLMap Essentials](18-sqlmap/) | ⬜ | |
+| [SQLMap Essentials](18-sqlmap/) | ✅ | 2026-10-26 |
 | [Cross-Site Scripting (XSS)](19-xss/) | ✅ | 2026-10-26 |
 | [File Inclusion](20-file-inclusion/) | 🟨 | |
 | [File Upload Attacks](21-file-upload/) | 🟨 | |
