@@ -1,8 +1,8 @@
 # Network Enumeration with Nmap
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Use Nmap to discover live hosts, open ports, services, versions and the OS, and to run NSE scripts for deeper enumeration and known-CVE checks.
@@ -20,6 +20,7 @@ Use Nmap to discover live hosts, open ports, services, versions and the OS, and 
 | `-PU` | `-PU53` | UDP discovery |
 | `-PR` | `nmap 192.168.1.0/24 -PR` | ARP discovery (local network) |
 | `-n` | `nmap 192.168.1.1 -n` | No DNS resolution |
+| `--dns-server <ns>` | `nmap -sn 10.10.10.0/24 --dns-server 10.10.10.2` | Resolve via a specific name server (useful on internal DNS) |
 
 ### Target specification
 | Form | Meaning |
@@ -64,6 +65,7 @@ Use Nmap to discover live hosts, open ports, services, versions and the OS, and 
 | `--min-rate` / `--max-rate` | Packets per second bounds |
 | `--min-hostgroup` / `--max-hostgroup` | Hosts scanned in parallel |
 | `--min-parallelism` / `--max-parallelism` | Probes sent in parallel |
+| `--stats-every 5s` | Print scan progress/ETA every N seconds |
 
 ### Service / version & OS detection
 | Flag | Meaning |
