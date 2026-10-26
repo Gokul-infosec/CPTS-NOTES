@@ -78,33 +78,3 @@ SELECT @@secure_file_priv;                          -- empty = INTO OUTFILE allo
 **Parameterized queries / prepared statements** (the real fix — data never becomes code), input validation/allow-lists, least-privilege DB account (no FILE/DBA for the web user), disable detailed DB errors, WAF as defence-in-depth (not a substitute).
 
 > **Workflow:** find input → break syntax with `'` → if login, try `admin'-- -` / `' OR 1=1-- -` → else find columns with `ORDER BY`/`UNION SELECT` → fingerprint `@@version`/`database()` → walk `information_schema` for tables+columns → dump → if FILE/DBA, `LOAD_FILE` and maybe `INTO OUTFILE`. Comment out the query tail with `-- -` (note the trailing space) every time.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

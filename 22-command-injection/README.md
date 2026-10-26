@@ -70,9 +70,6 @@ The combos that don't return the WAF's block message (e.g. "Malicious request de
 
 > Workflow: confirm with `id` first, then escalate filter bypasses in order (spaces → chars → encoding). Base64-piping-to-bash defeats most naive filters in one shot.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full reference (source notes)
 Complete operator / separator / bypass / obfuscation set — nothing trimmed.
 
@@ -154,33 +151,3 @@ Complete operator / separator / bypass / obfuscation set — nothing trimmed.
 | `?to=tmp%26$()l's'${IFS}${PATH:0:1}${IFS}-a'l'` | Sub-shell separator + obfuscated `ls` |
 
 > Note the Burp Intruder method (above) for finding which separator+command combo gets past the WAF: Payload 1 = separators (not URL-encoded), Payload 2 = obfuscated commands (URL-encoded), cluster bomb.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

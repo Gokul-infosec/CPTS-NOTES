@@ -164,17 +164,3 @@ nmap -p80 --script http-form-brute \
 ```
 
 > Full per-service NSE script list is in [`cheatsheets/nse-scripts-by-service.md`](../cheatsheets/nse-scripts-by-service.md). `brute` and credential scripts are intrusive and can lock accounts — in-scope, approved use only.
-
-## 4. Commands I ran (lab)
-Filled in once I run these on Pwnbox, with real IPs as `<TARGET_IP>`.
-
-```bash
-# [ATTACK BOX - Pwnbox]
-
-```
-
-## 5. Open questions / revisit
-- 
-
-## 6. Cheat sheet lines
-Verified commands copied into `cheatsheets/enumeration.md`.

@@ -85,9 +85,6 @@ Strong unique passwords + MFA, no password reuse, protect LSASS (Credential Guar
 
 > The flow: loot hashes (dump or find them) → identify the type (hashid / hash-identifier) → pick the right hashcat `-m` mode → crack with rockyou + rules. Getting the mode right is half the battle. Credential reuse across hosts is what turns one cracked hash into the whole network.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete command set — nothing trimmed.
 
@@ -179,33 +176,3 @@ Complete command set — nothing trimmed.
 | `bitlocker2john -i Backup.vhd > backup.hashes` | Extract BitLocker hashes from a VHD |
 | `file GZIP.gzip` | Identify a file's format |
 | `for i in $(cat rockyou.txt);do openssl enc -aes-256-cbc -d -in GZIP.gzip -k $i 2>/dev/null \| tar xz;done` | Brute an encrypted archive |
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

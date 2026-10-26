@@ -246,36 +246,3 @@ windows-exploit-suggester.py --database <db>.xls --systeminfo sysinfo.txt
 **On a real engagement:** confirm with the client **before** exploiting EOL boxes — they're often fragile and run critical legacy apps, so an exploit can crash production. The finding itself (unsupported OS) + remediation (patch/replace, or **network-segment** if they can't) is high-value in the report regardless of whether you pop it.
 
 > EOL systems are the easiest privesc you'll meet — no patches, no modern defenses, public exploits for everything. But they're also the most fragile; the professional move is to flag the risk and get explicit sign-off before firing MS17-010 at a box that might be running the client's billing system.
-
-## My notes / lab output
-Filled in as I run these on lab targets.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

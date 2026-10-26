@@ -76,9 +76,6 @@ Network segmentation, egress filtering, no dual-homed hosts without controls, mo
 
 > **Ligolo-ng is the modern favorite** — it gives you a real route to the internal net, so every tool works natively (no `proxychains` wrapping). Flow: recon the pivot's extra NIC → stand up ligolo (or SSH -D + proxychains) → add the route → attack the new subnet. Chisel/dnscat2 are the fallbacks when only web/DNS egress is allowed.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete command set — nothing trimmed.
 
@@ -169,33 +166,3 @@ Complete command set — nothing trimmed.
 | `ssh -p2222 -lubuntu 127.0.0.1` | SSH through the ICMP tunnel |
 | `regsvr32.exe SocksOverRDP-Plugin.dll` | Register SocksOverRDP plugin |
 | `netstat -antb \| findstr 1080` | Confirm SocksOverRDP listener |
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

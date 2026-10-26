@@ -66,33 +66,3 @@ sqlmap ... --os-shell                               # interactive OS command she
 Read output lands under `~/.local/share/sqlmap/output/<target>/files/`. `--file-write` + `--os-shell` are how a DBA-level SQLi turns into RCE — the webshell/payload itself isn't stored in this repo; the flags and the DBA precondition are the point.
 
 > **Workflow:** capture the request in Burp → `sqlmap -r req.txt -p <param> --batch` → if nothing, crank `--level`/`--risk` and add `--dbms`; if a filter blocks you, `--list-tampers` and try `between`/`--random-agent` → enumerate `--dbs` → `-D … --tables` → `-D … -T … --dump` → if `--is-dba` and conditions allow, `--file-read`/`--os-shell`. `--flush-session` + `--no-cast` fix most "it half-worked" situations.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

@@ -67,9 +67,6 @@ WHOIS privacy, restrict zone transfers to secondary servers, don't expose dev/st
 
 > Start passive (crt.sh + wayback + dorks = free, stealthy, surprisingly complete), then go active (dnsenum, vhost brute, AXFR). CT logs and forgotten subdomains (dev/staging/old apps) are where the soft targets hide.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete command set — nothing trimmed. `export TARGET="domain.tld"` first, then reuse `$TARGET`.
 
@@ -134,33 +131,3 @@ sources.txt: `baidu, bufferoverun, crtsh, hackertarget, otx, projecdiscovery, ra
 | ZAP (zaproxy.org) | Web proxy/crawler |
 | `ffuf -recursion -recursion-depth 1 -u http://192.168.10.10/FUZZ -w /opt/useful/SecLists/Discovery/Web-Content/raft-small-directories-lowercase.txt` | Discover hidden files/folders |
 | `ffuf -w ./folders.txt:FOLDERS,./wordlist.txt:WORDLIST,./extensions.txt:EXTENSIONS -u http://www.target.domain/FOLDERS/WORDLISTEXTENSIONS` | Mutated brute force |
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

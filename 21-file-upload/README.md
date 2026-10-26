@@ -29,36 +29,3 @@ Upload a server-side script (PHP/ASP/JSP) that runs commands, then browse to it 
 Whitelist by extension **and** validate content/magic bytes; store uploads outside the webroot or on a non-exec path; randomize filenames; serve with a safe Content-Type; never trust client-side checks.
 
 > Order of bypass attempts: client-side → blacklist (alt extension) → whitelist (double/reverse ext, char injection) → content-type → magic bytes. SVG is the sleeper — "image" upload that's really XML → XSS and XXE.
-
-## My notes / lab output
-Filled in as I run these on lab targets.
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

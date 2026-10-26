@@ -79,9 +79,6 @@ Generic login errors (no user enum), rate limiting + lockout (server-side, not p
 
 > Two highest-value checks: username enumeration (different error/timing) to build a target list, then spray — and always test whether rate limiting is only per-IP (beatable with `X-Forwarded-For`). Session fixation hinges on one fix: regenerate the ID at login.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete command set — nothing trimmed.
 
@@ -124,33 +121,3 @@ Complete command set — nothing trimmed.
 | `netstat -antp \| grep -i list` | Find internal listening services |
 | `scp -P 53718 ./william.txt b.gates@<ip>:/tmp` | Copy wordlist to the target |
 | `hydra -l m.gates -P /tmp/william.txt ftp://127.0.0.1` | Run hydra on the victim vs internal FTP |
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

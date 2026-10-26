@@ -362,33 +362,3 @@ Complete "Basic Tools" command set — nothing trimmed. (Reverse/bind shells + w
 | `base64 shell -w 0` | Encode a file to base64 |
 | `echo f0VMR...InmDwU \| base64 -d > shell` | Decode base64 back to a file |
 | `md5sum shell` | Verify the file transferred intact |
-
-## 2. Setup
-- Attack box: HTB Pwnbox (Parrot), unlimited time
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 

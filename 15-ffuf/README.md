@@ -67,9 +67,6 @@ for sub in archive test faculty; do ffuf -ic -w ext.txt:FUZZ -u http://$sub.t.ht
 
 > Workflow: run once with `-mc all` to learn the baseline size, then `-fs` that size to filter it out so only real hits show (or let `-ac` do it automatically). Hidden params (burp-parameter-names) often reveal unlinked, less-protected functionality — a top way in. `-replay-proxy` keeps Burp history clean by only sending the hits.
 
-## My notes / lab output
-Filled in as I run these on lab targets.
-
 ## Full command reference (source notes)
 Complete ffuf command set + flag reference — nothing trimmed.
 
@@ -149,33 +146,3 @@ Complete ffuf command set + flag reference — nothing trimmed.
 | `-mode` | clusterbomb / pitchfork / sniper |
 | `-e` / `-w` / `-request` / `-request-proto` | Extensions / wordlist:KEYWORD / raw request / proto |
 | `-o` / `-of` / `-od` / `-or` | Output file / format (json,html,md,csv,all) / dir / only-if-results |
-
-## 2. Setup
-- Attack box: (Pwnbox / Kali VM)
-- Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
-
-## 3. Commands I used
-Each block says which machine it ran on.
-
-```bash
-# [ATTACK BOX]
-
-```
-
-```bash
-# [TARGET]
-
-```
-
-## 4. Confirmed (what worked)
-- 
-
-## 5. Tried, didn't work (and why)
-- 
-
-## 6. Open questions / revisit
-- 
-
-## 7. Cheat sheet lines
-Copied into `cheatsheets/`:
-- 
