@@ -173,7 +173,7 @@ CPTS-NOTES/
 | [Getting Started](02-getting-started/) | 🟨 | |
 | [Network Enumeration with Nmap](03-nmap/) | 🟨 | |
 | [Footprinting](04-footprinting/) | 🟨 | |
-| [Information Gathering - Web Edition](05-web-info-gathering/) | ⬜ | |
+| [Information Gathering - Web Edition](05-web-info-gathering/) | 🟨 | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
 | [File Transfers](07-file-transfers/) | 🟨 | |
 | [Shells & Payloads](08-shells-payloads/) | 🟨 | |
@@ -183,7 +183,7 @@ CPTS-NOTES/
 | [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | 🟨 | |
 | [Active Directory Enumeration & Attacks](13-active-directory/) | 🟨 | |
 | [Using Web Proxies](14-web-proxies/) | ⬜ | |
-| [Attacking Web Applications with Ffuf](15-ffuf/) | ⬜ | |
+| [Attacking Web Applications with Ffuf](15-ffuf/) | 🟨 | |
 | [Login Brute Forcing](16-login-brute-forcing/) | 🟨 | |
 | [SQL Injection Fundamentals](17-sqli-fundamentals/) | ⬜ | |
 | [SQLMap Essentials](18-sqlmap/) | ⬜ | |
