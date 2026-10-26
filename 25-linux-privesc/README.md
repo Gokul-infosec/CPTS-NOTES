@@ -184,6 +184,41 @@ All reduce to: group membership or a writable socket → mount/chroot the host f
 - **tmux session hijack**: `ps aux | grep tmux` → if a root tmux socket is group/world-readable (`ls -la <sock>`), `tmux -S <sock> attach` → root shell. Fix: strict socket perms.
 - **Passive traffic capture**: `tcpdump -i <if> -w cap.pcap` → mine with `net-creds` / `PCredz` / `tshark` for cleartext creds + NetNTLM/Kerberos hashes. Fix: encrypt everything, segment.
 
+## Kernel exploits (detail)
+Last resort — can crash the box. Match the kernel to a public exploit:
+```bash
+uname -a ; cat /etc/os-release           # exact kernel + distro
+searchsploit "linux kernel <version>"    # or Google / Exploit-DB
+# compile + run the PoC:  gcc exploit.c -o e ; ./e ; id
+# Metasploit: post/multi/recon/local_exploit_suggester
+```
+Known ones: **DirtyCow (CVE-2016-5195)**, **DirtyPipe (CVE-2022-0847)**, PwnKit (polkit, CVE-2021-4034). Use reputable sources; exploits are version-fragile. Fix: patch the kernel.
+
+## Library & code hijacking (detail)
+All abuse the dynamic loader / import path to run attacker code with a privileged binary's rights. (Malicious source not stored — the mechanism is what matters.)
+
+- **LD_PRELOAD** — requires `env_keep += LD_PRELOAD` in sudoers. A shared object with an `_init()`/constructor that calls `setuid(0); system("/bin/bash")` is loaded ahead of everything:
+  ```bash
+  sudo -l                                   # look for env_keep LD_PRELOAD
+  # gcc -fPIC -shared -o x.so x.c -nostartfiles   (lib source not stored)
+  sudo LD_PRELOAD=/tmp/x.so <allowed-cmd>   # runs the lib's constructor as root
+  ```
+- **Shared-object hijacking** — a SUID binary loads a lib from a **writable RUNPATH**:
+  ```bash
+  ldd <suid-bin>                            # custom .so?
+  readelf -d <suid-bin> | grep PATH         # RUNPATH writable?
+  # drop a malicious .so named for the missing symbol in that dir → binary loads it
+  ```
+- **Python library hijacking** — a SUID/sudo-run python script imports a module you can influence:
+  - writable module file (`ls -l .../dist-packages/<mod>/__init__.py`) → edit it
+  - a writable dir earlier in `sys.path` → shadow the module
+  - `PYTHONPATH` controllable via sudo (`env_keep`) → point it at your module
+  ```bash
+  cat <script>.py ; python3 -c 'import sys;print(sys.path)'   # find the hijack point
+  ```
+
+> These are "the binary runs as root and loads code from a place I can write" attacks. Checks: `sudo -l` (env_keep), `ldd`/`readelf -d` on SUID binaries, and write-perms on imported Python modules / sys.path dirs.
+
 ## Linux hardening (defense / report side)
 - **Patching:** automate — `unattended-upgrades` (Debian/Ubuntu), `yum-cron`/`dnf-automatic` (RHEL).
 - **Config:** audit SUID/SGID + world-writable; absolute paths in cron/sudo; no creds in files/history; remove unused packages/services; SELinux or AppArmor enforcing.
