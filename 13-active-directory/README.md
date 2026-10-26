@@ -7,6 +7,44 @@
 ## 1. Goal
 Enumerate and attack Active Directory end to end: from no creds → a foothold user → privilege escalation / lateral movement → Domain Admin → persistence. The largest module and the core of internal pentesting.
 
+## External recon (OSINT) — before touching the network
+Passive (no interaction: public data) vs active (direct interaction: scans). Goal: IP space, domains, naming schema, data disclosures, breach creds.
+- **IP/ASN:** whois, BGP toolkit, bgp.he.net → network ranges
+- **Domains/subdomains:** nslookup/dig, Sublist3r, Amass, DNSdumpster
+- **Exposed services:** Shodan, Censys
+- **Breach creds:** Dehashed, HaveIBeenPwned
+- **Secrets in code:** Trufflehog (repos), Google dorking
+- **Schema:** work out username/email format (f.last@, first.last@) for later spraying
+Stay in scope, authorized only, handle found data responsibly.
+
+## Initial internal enumeration (foothold on the network)
+Setup varies: internal VM/laptop/VPN/VDI/cloud box; grey or black box; evasive or not; with or without creds. Goal: live hosts, services, users, DCs, vulnerable targets.
+```bash
+# passive first — just listen
+sudo tcpdump -i <iface>
+sudo responder -I <iface> -A          # ANALYZE mode: watch LLMNR/NBT-NS/MDNS without poisoning
+# active
+fping -asgq 172.16.5.0/23             # fast alive-host sweep
+sudo nmap -v -A -iL hosts.txt -oN host-enum
+# user enum (no creds needed) with kerbrute
+kerbrute userenum -d <DOMAIN> --dc <DC_IP> users.txt -o valid_ad_users
+```
+- Key services to spot: Kerberos (88), NetBIOS (139), LDAP (389), DNS (53), SMB (445).
+- `NT AUTHORITY\SYSTEM` on a domain-joined host = effectively a machine account in AD → enumerate/attack from there.
+- Watch your noise and match it to the test type (evasive vs not). Flag EternalBlue/MS08-067-class vulns but get approval before exploiting.
+- **First real goal: one valid domain user** — it unlocks authenticated enumeration (BloodHound, etc.).
+
+## AD management PowerShell (quick reference)
+Useful on a Windows foothold and for understanding what defenders see. `Import-Module ActiveDirectory`; `Get-Command -Module ActiveDirectory`.
+```powershell
+# recon-friendly reads
+Get-ADUser -Identity <u> -Properties *
+Get-ADComputer -Identity <name> -Properties * | select CN,CanonicalName,IPv4Address
+Get-ADGroup -Identity "Domain Admins" -Properties * | select Name,GroupScope,Members
+# management cmdlets (New/Set/Add/Remove-ADUser, -ADGroup, -ADGroupMember, GPO: New-GPLink/Copy-GPO)
+```
+> On the attacker side, the read cmdlets (`Get-AD*`) + PowerView are the enumeration workhorses; the write cmdlets matter when abusing delegated rights (e.g. adding yourself to a group BloodHound shows you can modify).
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
