@@ -1,8 +1,8 @@
 # Using Web Proxies
 
-> Status: 🟨 In progress (sections 1–10 of 15 filled)
+> Status: ✅ Complete (section 15 is the skills-assessment lab to do myself)
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Sit a **web proxy** (Burp Suite / OWASP ZAP) between the browser and the back-end server as a man-in-the-middle, so I can **capture, inspect, intercept, modify and replay** every HTTP request/response. This is the core tool of web app pentesting — front-end JS validation means nothing once I can edit the raw request on the wire.
@@ -100,4 +100,32 @@ Fuzz pages, dirs, subdomains, parameters, values; alternative to ffuf/gobuster/w
 
 Beyond dirs: password brute-force, parameter fuzzing, and **password spraying** against AD-backed apps (OWA, SSL VPN portals, RDS, Citrix, custom AD-auth web apps). Throttling makes Community impractical for large runs — ZAP's fuzzer (next) has no paid tier.
 
-> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept/edit the raw request (or the response to unlock the UI), or set a match-and-replace rule to automate it → send repeated payloads via Repeater/Request Editor → URL-encode request data and decode/encode cookies and params with Decoder / Encoder-Decoder-Hash → fuzz/brute-force with Intruder (or proxy CLI tools through to inspect their traffic). Front-end validation is irrelevant once you're editing on the wire. (Sections 11–15 — ZAP fuzzer, scanner/crawler, Comparer, extensions, config — to be added.)
+## ZAP Fuzzer
+ZAP's fuzzer — **not throttled** (big edge over free Burp Intruder), though fewer features.
+1. Capture a request, in History right-click → **Attack > Fuzz**.
+2. **Locations** — select the word to fuzz (e.g. `test`) → **Add** (green marker) = payload position.
+3. **Payloads** — **Add** → 8 types incl. **File** (your wordlist), **File Fuzzers** (built-in dbs, e.g. dirbuster `directory-list-1.0.txt`), **Numberzz** (number sequences).
+4. **Processors** (per-word transform): Base64 encode/decode, MD5/SHA-1/256/512, Prefix/Postfix String, **URL encode/decode**, Script. (Generate Preview to check.)
+5. **Options** — Concurrent Scanning Threads (e.g. 20 = fast), retries, **Depth first** (all words on one position before moving on — e.g. all passwords for one user) vs **Breadth first** (one word across all positions first).
+6. **Start Fuzzer** → sort by Response code for `200`; also watch **Size Resp. Body** (different page) and **RTT** (time-based SQLi).
+
+## Burp Scanner (Pro-only)
+Crawler builds the site structure; Scanner does passive + active vuln scanning.
+- **Scope** (`Target > Scope`): `Target > Site map` → right-click target → **Add to scope** (Burp offers to restrict to in-scope only); **Remove from scope** for dangerous items (e.g. logout); advanced scope = regex include/exclude.
+- **Start a scan:** right-click a request → **Scan** (configure) or **Passive/Active Scan** (defaults); or **New Scan** on the Dashboard for a target set.
+- **Crawler:** *Crawl* maps links/forms (does **not** brute unreferenced pages — use Intruder/Content Discovery for that). *Crawl and Audit* = crawl then scan. Pick a preset via **Select from library** (e.g. "Crawl strategy - fastest"); add creds / record a login for authenticated coverage.
+- **Passive scan** — no new requests; analyses already-visited pages for issues (missing headers, DOM-XSS). Gives severity + **Confidence**. Prioritise **High severity + Certain/Firm confidence**.
+- **Active scan** — crawl + fuzz to find pages → passive scan → verify each issue with requests → JS analysis → fuzz insertion points for XSS/CmdInj/SQLi etc. Watch progress in **Tasks**/**Logger**; filter Issue activity by **High + Certain**. (Example hit: OS command injection on the `ip` parameter, High/Firm.)
+- **Reporting:** `Target > Site map` → right-click target → **Issue > Report issues for this host** → pick format/content → open in a browser. (Appendix data only — never the final client deliverable.)
+
+## ZAP Scanner
+- **Spider** (≈ Burp Crawler): History right-click → **Attack > Spider**, or HUD **Spider Start** (2nd right-pane button); add to scope when prompted. Results in **Sites** tree. **Ajax Spider** (3rd button) also follows JS/AJAX-requested links — run after the normal spider for extra coverage.
+- **Passive scan** runs automatically as the Spider makes requests — **Alerts** populate (left = current page, right = whole app); see the **Alerts** tab.
+- **Active scan** — **Active Scan** button (right pane); runs attacks against all pages/params (slower). High alerts are the ones that compromise the app/server (e.g. Remote OS Command Injection, attack `127.0.0.1&cat /etc/passwd&`, evidence `root:x:0:0`). Replay via HUD / Request Editor.
+- **Reporting:** `Report > Generate HTML Report` (also XML / Markdown).
+
+## Extensions
+- **Burp BApp Store** (`Extensions > BApp Store`): sort by Popularity; some are Pro-only; some need Jython/Jruby. e.g. **Decoder Improved** (more encoders/hashers). Worth checking: Active Scan++, J2EEScan, Java Deserialization Scanner, Retire.JS, Autorize, CSRF Scanner, JS Link Finder, Software Vulnerability Scanner, CSP Auditor, Headers Analyzer, Error Message Checks.
+- **ZAP Marketplace** (`Manage Add-ons > Marketplace`): Release (stable) vs Beta/Alpha builds. e.g. **FuzzDB Files/Offensive** add wordlists — then in File Fuzzers use `fuzzdb > attack > os-cmd-execution` (`command_execution-unix.txt`) for command-injection fuzzing, handy against WAF-protected apps.
+
+> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept/edit the raw request (or the response to unlock the UI), or set a match-and-replace rule to automate it → send repeated payloads via Repeater/Request Editor → URL-encode request data and decode/encode cookies and params with Decoder / Encoder-Decoder-Hash → fuzz with Intruder / ZAP Fuzzer, map + scan with the Crawler/Spider + passive/active scanners, extend with BApp Store / Marketplace → proxy CLI tools (proxychains / MSF `set PROXIES`) to inspect their traffic. Front-end validation is irrelevant once you're editing on the wire; scanner reports are appendix data, never the final deliverable.
