@@ -219,6 +219,21 @@ All abuse the dynamic loader / import path to run attacker code with a privilege
 
 > These are "the binary runs as root and loads code from a place I can write" attacks. Checks: `sudo -l` (env_keep), `ldd`/`readelf -d` on SUID binaries, and write-perms on imported Python modules / sys.path dirs.
 
+## Named local-root CVEs (reference)
+When misconfigs don't pan out, match the version to a known local-privesc CVE (public PoCs exist; clone/compile/run). Always confirm the version range — wrong kernel = crash.
+```bash
+sudo -V | head -1 ; uname -r ; cat /etc/os-release    # fingerprint
+```
+| CVE / name | Hits | Note |
+|---|---|---|
+| **CVE-2019-14287** (sudo bypass) | sudo < 1.8.28, user allowed a command as non-root | one-liner: `sudo -u#-1 /bin/bash` (−1 → uid 0). No compile needed. |
+| **CVE-2021-3156** (Baron Samedit) | sudo 1.8.x/1.9.x (pre-1.9.5p2) | heap overflow in sudoedit; pick the matching target id |
+| **CVE-2021-4034** (PwnKit) | pkexec/polkit, ~all distros pre-2022 | super reliable, near-universal — a go-to |
+| **CVE-2022-0847** (Dirty Pipe) | kernel 5.8–5.17 | write to read-only files: overwrite /etc/passwd or hijack a SUID binary |
+| **CVE-2021-22555 / 2023-32233** (Netfilter/nftables) | kernel 2.6–5.11 / up to 6.3.1 | UAF/OOB in netfilter; can be unstable |
+
+> Order of preference: **PwnKit** first (reliable, almost everywhere), then version-matched sudo/kernel CVEs. Dirty Pipe is clean when the kernel's in range. Save unstable ones (Netfilter) for last — they can panic the box. Confirm the exact version every time.
+
 ## Linux hardening (defense / report side)
 - **Patching:** automate — `unattended-upgrades` (Debian/Ubuntu), `yum-cron`/`dnf-automatic` (RHEL).
 - **Config:** audit SUID/SGID + world-writable; absolute paths in cron/sudo; no creds in files/history; remove unused packages/services; SELinux or AppArmor enforcing.
