@@ -183,7 +183,7 @@ CPTS-NOTES/
 | [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | 🟨 | |
 | [Active Directory Enumeration & Attacks](13-active-directory/) | 🟨 | |
 | [Using Web Proxies](14-web-proxies/) | ⬜ | |
-| [Attacking Web Applications with Ffuf](15-ffuf/) | 🟨 | |
+| [Attacking Web Applications with Ffuf](15-ffuf/) | ✅ | 2026-10-26 |
 | [Login Brute Forcing](16-login-brute-forcing/) | 🟨 | |
 | [SQL Injection Fundamentals](17-sqli-fundamentals/) | ⬜ | |
 | [SQLMap Essentials](18-sqlmap/) | ⬜ | |
