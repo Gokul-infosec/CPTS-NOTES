@@ -172,7 +172,7 @@ CPTS-NOTES/
 | [Penetration Testing Process](01-penetration-testing-process/) | 🟨 | |
 | [Getting Started](02-getting-started/) | 🟨 | |
 | [Network Enumeration with Nmap](03-nmap/) | 🟨 | |
-| [Footprinting](04-footprinting/) | 🟨 | |
+| [Footprinting](04-footprinting/) | ✅ | 2026-10-26 |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | 🟨 | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
 | [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
