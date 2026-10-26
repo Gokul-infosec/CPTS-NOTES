@@ -187,7 +187,7 @@ CPTS-NOTES/
 | [SQL Injection Fundamentals](17-sqli-fundamentals/) | ✅ | 2026-10-26 |
 | [SQLMap Essentials](18-sqlmap/) | ✅ | 2026-10-26 |
 | [Cross-Site Scripting (XSS)](19-xss/) | ✅ | 2026-10-26 |
-| [File Inclusion](20-file-inclusion/) | 🟨 | |
+| [File Inclusion](20-file-inclusion/) | ✅ | 2026-10-27 |
 | [File Upload Attacks](21-file-upload/) | 🟨 | |
 | [Command Injections](22-command-injection/) | 🟨 | |
 | [Web Attacks](23-web-attacks/) | 🟨 | |
