@@ -22,6 +22,20 @@ accesschk.exe /accepteula \\.\Pipe\lsass -v
 ```
 Automate with **winPEAS** / **PowerUp** (`Invoke-AllChecks`) / **Seatbelt**.
 
+### Enumeration extras (beyond the basics above)
+```powershell
+schtasks /query /fo LIST /v              # scheduled tasks (writable task/script = privesc)
+driverquery                              # loaded drivers (vuln driver = BYOVD / kernel)
+wmic product get name                    # installed software -> known-vuln apps
+Get-Service | select Name,StartType,Status   # services (feeds unquoted-path / weak-ACL checks)
+# named pipes — look for writable pipes to impersonate
+accesschk.exe /accepteula -w \pipe\* -v
+accesschk.exe /accepteula \\.\Pipe\<pipe> -v
+# listening ports (internal services for pivoting)
+netstat -ano ; Get-NetTCPConnection | ? {$_.State -eq 'Listen'}
+```
+> Situational awareness first: know the OS/patch level, what's running, what's listening, and what defenses (Defender/AppLocker/EDR) are watching — that decides which technique won't get caught.
+
 ## Token privilege abuse (the main service->SYSTEM path)
 `whoami /priv` is the first thing to read. The gold ones:
 | Privilege | Abuse |
