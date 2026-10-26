@@ -122,7 +122,7 @@ My general penetration testing workflow:
 
 ## 📂 Repository Structure
 
-One folder per module, in path order. Every module note follows the same layout: goal, commands (labelled by machine), what worked, what failed and why, open questions, and cheat sheet lines.
+One folder per module, in path order. Every module note follows the same layout: goal, then clean reference sections — commands (labelled by machine where relevant), techniques and bypasses, and a fix/defense summary.
 
 ```text
 CPTS-NOTES/
@@ -188,7 +188,7 @@ CPTS-NOTES/
 | [SQLMap Essentials](18-sqlmap/) | ✅ | 2026-10-26 |
 | [Cross-Site Scripting (XSS)](19-xss/) | ✅ | 2026-10-26 |
 | [File Inclusion](20-file-inclusion/) | ✅ | 2026-10-27 |
-| [File Upload Attacks](21-file-upload/) | ✅ | |
+| [File Upload Attacks](21-file-upload/) | ✅ | 2026-10-27 |
 | [Command Injections](22-command-injection/) | ✅ | 2026-10-27 |
 | [Web Attacks](23-web-attacks/) | ✅ | 2026-10-27 |
 | [Attacking Common Applications](24-common-applications/) | ✅ | 2026-10-27 |
