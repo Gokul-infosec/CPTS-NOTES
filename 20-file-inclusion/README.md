@@ -31,6 +31,18 @@ Windows targets: `..\..\..\windows\win.ini`, `C:\Windows\System32\drivers\etc\ho
 # expect:// for direct command exec (if the extension is loaded)
 ```
 
+## PHP wrappers for RCE — requirements & detail
+Before trying `data://`/`input://`, confirm the config via the base64 filter:
+```text
+?lang=php://filter/convert.base64-encode/resource=/etc/php/<ver>/apache2/php.ini
+# decode, then: grep -i "allow_url_include\|expect"
+```
+- **`data://`** and **`input://`** need **`allow_url_include = On`**. data:// carries base64-encoded PHP inline (`data://text/plain;base64,<your-b64-php>` — encode your own payload, not stored here); input:// takes the PHP in the POST body with the command as a GET param (`curl -s "http://t/?lang=php://input&cmd=id" --data "<php>"`).
+- **`expect://`** needs the **expect extension** loaded → direct command exec: `?lang=expect://id`.
+- **`phar://` / `zip://`** — when you can upload a file: pack PHP into a phar/zip, then LFI into it for execution (classic "upload a .jpg, LFI the phar inside").
+
+> Check the config first (which wrappers are even possible), then: `expect://` is the simplest if present; else `data://`/`input://` need `allow_url_include`; else fall back to log poisoning. Each needs a specific setting enabled, so enumerate php.ini via the base64 filter before burning time.
+
 ## LFI → RCE paths
 - **PHP filter source disclosure** → read config/source → find creds or the next bug.
 - **Log poisoning:** inject PHP into a log (User-Agent → access.log, or auth.log/ mail) then LFI the log → it executes. (Webshell payload not stored here.)
