@@ -190,7 +190,7 @@ CPTS-NOTES/
 | [Cross-Site Scripting (XSS)](19-xss/) | ⬜ | |
 | [File Inclusion](20-file-inclusion/) | ⬜ | |
 | [File Upload Attacks](21-file-upload/) | ⬜ | |
-| [Command Injections](22-command-injection/) | ⬜ | |
+| [Command Injections](22-command-injection/) | 🟨 | |
 | [Web Attacks](23-web-attacks/) | 🟨 | |
 | [Attacking Common Applications](24-common-applications/) | 🟨 | |
 | [Linux Privilege Escalation](25-linux-privesc/) | 🟨 | |
