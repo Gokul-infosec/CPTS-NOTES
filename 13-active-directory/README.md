@@ -614,6 +614,36 @@ Why AD matters: it mirrors real day-to-day internal pentesting, and it's the lau
 
 > My move: after filling these notes, actually pwn Forest and Active (easy AD boxes), compare to 0xdf / IppSec write-ups, and log my own commands in the section below.
 
+## AD Hardening & Auditing (defense / report side)
+The remediation half — most of this maps directly to the attacks above, which is exactly what a report needs.
+
+**People:** strong password policy + filters; rotate service-account passwords (prefer **gMSA**); no local admin for users; disable the RID-500 built-in admin; **tiered administration**; restrict DA/EA membership; **Protected Users** group (blocks delegation, NTLM/RC4/DES, plaintext caching) for admins; disable delegation on admin accounts.
+
+**Process:** asset management; provisioning/deprovisioning + MFA; gold-image baselines; stale-account cleanup; decommission legacy OS/services; scheduled audits.
+
+**Technology (these kill specific attacks):**
+| Control | Stops |
+|---|---|
+| `ms-DS-MachineAccountQuota = 0` | NoPac, RBCD (users can't add computers) |
+| Disable Print Spooler (esp. DCs) | PrintNightmare, Printer Bug |
+| SMB signing + LDAP signing/channel binding | NTLM relay, poisoning |
+| Disable NTLM on DCs; EPA + Require SSL on CA | PetitPotam → AD CS relay |
+| gMSA + AES (no RC4) | Kerberoasting |
+| No passwords in descriptions; scrub SYSVOL | GPP cpassword, quick-win loot |
+| Disable unconstrained delegation | TGT theft |
+| RestrictNullSessAccess | null-session enum |
+| Run BloodHound/PingCastle/Grouper yourself | find it before attackers do |
+
+**MITRE ATT&CK mapping (for findings):** external recon T1589, poisoning T1557, password spraying T1110.003, Kerberoasting T1558.003, etc. Citing the technique ID makes a finding traceable.
+
+## AD auditing tools (defensive enumeration)
+- **AD Explorer** (Sysinternals) — browse AD, edit objects, and **snapshot** the DB for offline before/after comparison.
+- **PingCastle** — scores AD security posture, maps, health-check reports (great for the report). (Tool quirk: if it won't run, set system date before 2023-07-31.)
+- **Group3r** — finds Group Policy vulns (`group3r.exe -f out.log`); catches GPO issues others miss.
+- **ADRecon** — dumps *everything* (users, groups, GPOs, trusts, password policy, LAPS, BitLocker) to HTML/CSV; loud but thorough when stealth isn't needed.
+
+> Every attack in this module has a control that kills it. Pairing "here's how I got DA" with "here's the one setting that stops it" (e.g. Kerberoast → gMSA, NoPac → MachineAccountQuota 0) is what a senior-level report reads like.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
