@@ -155,7 +155,6 @@ CPTS-NOTES/
 ├── 25-linux-privesc/
 ├── 26-windows-privesc/
 ├── 27-documentation-reporting/
-├── 28-attacking-enterprise-networks/
 ├── cheatsheets/           ← verified commands grouped by phase
 └── templates/             ← note layout every module follows
 ```
@@ -196,7 +195,6 @@ CPTS-NOTES/
 | [Linux Privilege Escalation](25-linux-privesc/) | 🟨 | |
 | [Windows Privilege Escalation](26-windows-privesc/) | 🟨 | |
 | [Documentation & Reporting](27-documentation-reporting/) | ✅ | 2026-10-26 |
-| [Attacking Enterprise Networks](28-attacking-enterprise-networks/) | ⬜ | |
 
 ---
 
