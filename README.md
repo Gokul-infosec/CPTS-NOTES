@@ -184,7 +184,7 @@ CPTS-NOTES/
 | [Active Directory Enumeration & Attacks](13-active-directory/) | 🟨 | |
 | [Using Web Proxies](14-web-proxies/) | ⬜ | |
 | [Attacking Web Applications with Ffuf](15-ffuf/) | ✅ | 2026-10-26 |
-| [Login Brute Forcing](16-login-brute-forcing/) | 🟨 | |
+| [Login Brute Forcing](16-login-brute-forcing/) | ✅ | 2026-10-26 |
 | [SQL Injection Fundamentals](17-sqli-fundamentals/) | ⬜ | |
 | [SQLMap Essentials](18-sqlmap/) | ⬜ | |
 | [Cross-Site Scripting (XSS)](19-xss/) | ✅ | 2026-10-26 |
