@@ -175,7 +175,7 @@ CPTS-NOTES/
 | [Information Gathering - Web Edition](05-web-info-gathering/) | ✅ | 2026-10-26 |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ✅ | 2026-10-26 |
 | [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
-| [Shells & Payloads](08-shells-payloads/) | 🟨 | |
+| [Shells & Payloads](08-shells-payloads/) | ✅ | 2026-10-27 |
 | [Using the Metasploit Framework](09-metasploit/) | ✅ | 2026-10-26 |
 | [Password Attacks](10-password-attacks/) | ✅ | 2026-10-26 |
 | [Attacking Common Services](11-attacking-common-services/) | 🟨 | |

