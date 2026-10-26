@@ -1,8 +1,8 @@
 # Information Gathering - Web Edition
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Map a target's web footprint: domains, subdomains, IPs, tech, hidden content. **Passive** (no touch: WHOIS, CT logs, search, archives — stealthy) vs **active** (probe DNS/vhosts — louder).
@@ -12,15 +12,32 @@ Map a target's web footprint: domains, subdomains, IPs, tech, hidden content. **
 whois example.com                    # registrar, dates, contacts, nameservers
 dig example.com A                    # IPv4 (AAAA=IPv6, CNAME=alias, MX=mail, NS=nameservers, TXT, SOA)
 dig any example.com @<ns>
+dig -x <ip> @<ns>                     # PTR / reverse lookup (nslookup -query=PTR <ip>)
+nslookup -query=MX example.com       # nslookup equivalents: -query=A/PTR/ANY/TXT/MX
 ```
+Tip: `export TARGET="example.com"` once, then reuse `$TARGET` across all commands.
 
 ## Subdomain enumeration
 - **Passive (stealth):** Certificate Transparency logs —
   ```bash
   curl -s "https://crt.sh/?q=%25.example.com&output=json" | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u
   ```
-  also subfinder/amass (passive mode), search engines.
+  also subfinder/amass (passive mode), search engines, VirusTotal/Censys.
+  ```bash
+  cat sources.txt | while read s; do theHarvester -d "$TARGET" -b $s -f "$s-$TARGET"; done
+  # sources.txt: crtsh, hackertarget, otx, rapiddns, sublist3r, urlscan, virustotal, zoomeye...
+  ```
 - **Active (brute):** `dnsenum example.com -f subdomains.txt`, `gobuster dns -d example.com -w wordlist`.
+
+## Active infrastructure fingerprinting
+```bash
+curl -I "http://$TARGET"              # server headers
+whatweb -a3 -v https://$TARGET        # aggressive tech ID (CMS, frameworks, versions)
+wafw00f -v https://$TARGET            # is there a WAF, and which one?
+cat subdomains.txt | aquatone -out ./aquatone -screenshot-timeout 1000   # screenshot every subdomain
+waybackurls -dates https://$TARGET > waybackurls.txt                     # historical URLs w/ dates
+```
+Aquatone's screenshot gallery is the fastest way to triage a big subdomain list — spot logins, dev panels, odd apps at a glance.
 
 ## Zone transfer (AXFR) — misconfig = whole DNS zone
 ```bash

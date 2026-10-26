@@ -173,7 +173,7 @@ CPTS-NOTES/
 | [Getting Started](02-getting-started/) | ✅ | 2026-10-26 |
 | [Network Enumeration with Nmap](03-nmap/) | 🟨 | |
 | [Footprinting](04-footprinting/) | ✅ | 2026-10-26 |
-| [Information Gathering - Web Edition](05-web-info-gathering/) | 🟨 | |
+| [Information Gathering - Web Edition](05-web-info-gathering/) | ✅ | 2026-10-26 |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
 | [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
 | [Shells & Payloads](08-shells-payloads/) | 🟨 | |
