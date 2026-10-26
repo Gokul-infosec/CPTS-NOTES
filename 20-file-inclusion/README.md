@@ -120,8 +120,11 @@ Tools (mostly dated, Python2): LFISuite, liffy, LFiFreak — verify results manu
 ## Fix / prevention
 - **Best defense: don't put user input into include paths.** Load assets by a fixed map, not a parameter.
 - **Whitelist** allowed values → specific files (DB lookup / case-match / JSON map).
-- **Stop traversal:** use `basename()`; recursive `../` stripping (naive single-pass replace is bypassable with `....//`).
-- **PHP config:** `allow_url_fopen=Off`, `allow_url_include=Off`, `open_basedir` to sandbox file access, disable `expect`/risky modules.
-- **Defense in depth:** WAF (ModSecurity), least privilege, patching, monitoring/IDS, store sensitive files outside the webroot.
+- **Stop traversal:** prefer the framework's built-in `basename()` (returns only the filename) over a custom function — native functions get edge-cases caught by the community (e.g. PHP doesn't honour bash `?`/`*` wildcards, but a homegrown filter might miss it). If you must strip, do it **recursively** (single-pass replace is bypassable with `....//`):
+  ```php
+  while(substr_count($input, '../', 0)) { $input = str_replace('../', '', $input); }
+  ```
+- **PHP config:** `allow_url_fopen=Off`, `allow_url_include=Off`, `open_basedir = /var/www` to lock to the webroot, disable risky modules (`expect`, `mod_userdir`); or run in Docker to sandbox.
+- **Defense in depth:** WAF (**ModSecurity** — run in *permissive mode* first to tune out false positives; even permissive is an early attack-warning), least privilege, patching, monitoring/IDS, store sensitive files outside the webroot. Hardening buys defenders time (avg detection was ~30 days per FireEye M-Trends 2020) and makes a zero-day leave unique logs — keep watching logs even on a hardened system.
 
 > LFI ladder: read `/etc/passwd` to confirm → `php://filter` to pull source/creds → escalate to RCE via log poisoning or a data/input wrapper. The base64 filter is the key trick — it lets you read PHP that would otherwise just execute.
