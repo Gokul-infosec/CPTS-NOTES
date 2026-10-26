@@ -165,6 +165,19 @@ The full menu. Commands for the core ones are in the attack-flow above; this is 
 
 > Bolded = the ones that actually come up most in CPTS/internal pentests. If I learn this column cold — LLMNR poisoning, Kerberoasting, AS-REP, DCSync, PtH, Golden/Silver ticket, delegation, AD CS, GPP cpassword — I've got the exam's AD surface covered.
 
+## Further learning & resources (module close)
+Why AD matters: it mirrors real day-to-day internal pentesting, and it's the launchpad for hybrid/cloud (Azure AD) work.
+
+**Practice boxes (retired HTB AD — do these):** Forest, Active, Reel, Mantis, Blackfield, Monteverde. Also: Intro to Zephyr, Pro Labs **Dante** & **Offshore**, Endgame **Ascension**.
+
+**Related HTB modules to pair:** AD BloodHound, AD LDAP & PowerView, Cracking Passwords with Hashcat (module 10 here).
+
+**Talks worth watching:** "Six Degrees of Domain Admin" (DEF CON 24), "Designing AD DACL Backdoors" (Schroeder/Robbins), "Kicking the Guard Dog of Hades", "Kerberoasting 101" (Tim Medin).
+
+**People/blogs to follow:** 0xdf, SpecterOps, harmj0y, ADSecurity (Sean Metcalf), Shenaniganslabs, Dirk-jan Mollema, The DFIR Report. Reference framework: **MITRE ATT&CK**.
+
+> My move: after filling these notes, actually pwn Forest and Active (easy AD boxes), compare to 0xdf / IppSec write-ups, and log my own commands in the section below.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
