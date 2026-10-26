@@ -168,7 +168,7 @@ CPTS-NOTES/
 
 | Module | Status | Finished |
 |---|---|---|
-| [Penetration Testing Process](01-penetration-testing-process/) | 🟨 | |
+| [Penetration Testing Process](01-penetration-testing-process/) | ✅ | 2026-10-26 |
 | [Getting Started](02-getting-started/) | ✅ | 2026-10-26 |
 | [Network Enumeration with Nmap](03-nmap/) | ✅ | 2026-10-26 |
 | [Footprinting](04-footprinting/) | ✅ | 2026-10-26 |

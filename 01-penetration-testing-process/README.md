@@ -1,8 +1,8 @@
 # Penetration Testing Process
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 The big picture of a pentest: the phases, how every later module fits into them, and the legal/ethical rules that apply to all of it. Theory module, worth re-reading as the path goes on.
@@ -210,8 +210,42 @@ The cornerstone of the whole test and the stage I return to most. Every exploit 
 - For every service, ask *why is this here?* The purpose points to the attack.
 - Internal = where the lazy configs are.
 
-#### Sections 9 to 14
-To be added in my own words.
+#### Vulnerability Assessment
+Using the gathered info, look for known vulns and investigate questionable features that allow unintended actions. "Analysis" here = examining an event/process, its origin and impact. Four analysis types:
+| Type | What it does |
+|---|---|
+| Descriptive | Describes the data set by its characteristics; detects collection errors / outliers |
+| Diagnostic | Backward-looking; finds *causes*, effects and interactions via correlation/interpretation |
+| Predictive | Uses historical + current data to model future probabilities; spots trends and deviations early |
+| Prescriptive | Narrows down *what actions to take* to prevent a problem or trigger a specific process |
+
+#### Exploitation
+Adapt the identified weaknesses to the goal (foothold, escalated privileges). Once I have one or two usable vulns, **prioritise** which to fire first by:
+- **Probability of Success**
+- **Complexity**
+- **Probability of Damage** (to the target — don't break what I was hired to protect)
+
+#### Post-Exploitation
+Pull sensitive/business-relevant info from a local perspective (usually needs more than standard-user rights). Runs as its own loop:
+- **Evasive Testing** → **Information Gathering** → **Pillaging** (the host's role in the corporate network) → **Vulnerability Assessment** → **(Privilege) Exploitation** → **Persistence** (keep access if the connection drops) → **Data Exfiltration** (PII, customer data).
+
+#### Lateral Movement
+If other internal hosts/servers are in scope, test what an attacker could do *across the whole network* — not just pop one public box but reach sensitive data or show the network could be rendered unusable. Re-runs the loop from the internal perspective:
+- **Pivoting** → **Evasive Testing** → **Information Gathering** → **Vulnerability Assessment** → **(Privilege) Exploitation** → **Post-Exploitation**.
+
+#### Proof-of-Concept
+Prove the vulnerabilities exist and the attack chain is feasible in principle — and where possible **automate** the individual steps that trigger each vuln, so the client can reproduce them.
+
+#### Post-Engagement
+Everything after active testing — this is where the test's value is realised:
+- **Data Analysis** — understand the vulns, exploitation methods, potential impact.
+- **Reporting** — clear, actionable report with prioritised remediation.
+- **Risk Analysis** — assess the risks so the client prioritises what to fix first.
+- **Debriefing** — stakeholder meeting on findings, implications, next steps.
+- **Remediation** — client patches and implements the recommended measures.
+- **Re-Testing** — confirm fixes worked and introduced no new issues.
+- **Documentation** — record everything (findings → remediation) for future security + compliance.
+- **Follow-Up** — ongoing comms so every recommendation is understood and implemented correctly.
 
 #### Practice
 - Theory is useless without hands-on reps. Communication counts just as much: clear emails, presenting and defending my work, solid reports.
