@@ -32,6 +32,13 @@ export TERM=xterm                                  # step 3
 ```
 Or use `socat` both ends for a full PTY from the start.
 
+**Finishing touches after the upgrade:**
+```bash
+stty rows 38 columns 116      # match your terminal size (fixes vim/less formatting)
+# get your real size first with `stty size` in your own terminal
+```
+If python isn't available, fallbacks: `script /dev/null -c bash` (or just `script -qc /bin/bash /dev/null`), `/bin/sh -i`, or spawn via perl/ruby/lua/awk (see local spawning below). `cat /etc/shells` shows what shells exist on the box.
+
 ## Local shell spawning (from a limited exec / SUID — GTFOBins)
 ```bash
 /bin/sh -i ; python3 -c 'import pty;pty.spawn("/bin/sh")'
