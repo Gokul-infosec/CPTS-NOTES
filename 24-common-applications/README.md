@@ -1,9 +1,8 @@
 # Attacking Common Applications
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Enumerate and attack common off-the-shelf applications (CMSs, dev tools, etc.). Starting with WordPress.
 

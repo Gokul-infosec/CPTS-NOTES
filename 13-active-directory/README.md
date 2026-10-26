@@ -1,9 +1,8 @@
 # Active Directory Enumeration & Attacks
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Enumerate and attack Active Directory end to end: from no creds → a foothold user → privilege escalation / lateral movement → Domain Admin → persistence. The largest module and the core of internal pentesting.
 

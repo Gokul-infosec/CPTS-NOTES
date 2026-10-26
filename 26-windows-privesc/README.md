@@ -1,9 +1,8 @@
 # Windows Privilege Escalation
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Escalate from a low-priv Windows user (or service) to SYSTEM/Administrator by abusing privileges, services, credentials and misconfigurations.
 

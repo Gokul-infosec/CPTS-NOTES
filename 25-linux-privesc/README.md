@@ -1,9 +1,8 @@
 # Linux Privilege Escalation
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Escalate from a low-priv shell to root on Linux by finding misconfigurations. The enumeration checks below are *both* the attacker's privesc hunt and the defender's hardening audit — same checks, opposite goals.
 

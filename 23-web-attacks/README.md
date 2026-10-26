@@ -1,9 +1,8 @@
 # Web Attacks
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Advanced web attacks (HTTP verb tampering, IDOR, XXE, and related logic flaws).
 

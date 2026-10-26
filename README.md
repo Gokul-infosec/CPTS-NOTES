@@ -180,7 +180,7 @@ CPTS-NOTES/
 | [Password Attacks](10-password-attacks/) | ✅ | 2026-10-26 |
 | [Attacking Common Services](11-attacking-common-services/) | ✅ | 2026-10-27 |
 | [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | ✅ | 2026-10-26 |
-| [Active Directory Enumeration & Attacks](13-active-directory/) | 🟨 | |
+| [Active Directory Enumeration & Attacks](13-active-directory/) | ✅ | 2026-10-27 |
 | [Using Web Proxies](14-web-proxies/) | ✅ | 2026-10-26 |
 | [Attacking Web Applications with Ffuf](15-ffuf/) | ✅ | 2026-10-26 |
 | [Login Brute Forcing](16-login-brute-forcing/) | ✅ | 2026-10-26 |
@@ -188,12 +188,12 @@ CPTS-NOTES/
 | [SQLMap Essentials](18-sqlmap/) | ✅ | 2026-10-26 |
 | [Cross-Site Scripting (XSS)](19-xss/) | ✅ | 2026-10-26 |
 | [File Inclusion](20-file-inclusion/) | ✅ | 2026-10-27 |
-| [File Upload Attacks](21-file-upload/) | 🟨 | |
-| [Command Injections](22-command-injection/) | 🟨 | |
-| [Web Attacks](23-web-attacks/) | 🟨 | |
-| [Attacking Common Applications](24-common-applications/) | 🟨 | |
-| [Linux Privilege Escalation](25-linux-privesc/) | 🟨 | |
-| [Windows Privilege Escalation](26-windows-privesc/) | 🟨 | |
+| [File Upload Attacks](21-file-upload/) | ✅ | 2026-10-27 |
+| [Command Injections](22-command-injection/) | ✅ | 2026-10-27 |
+| [Web Attacks](23-web-attacks/) | ✅ | 2026-10-27 |
+| [Attacking Common Applications](24-common-applications/) | ✅ | 2026-10-27 |
+| [Linux Privilege Escalation](25-linux-privesc/) | ✅ | 2026-10-27 |
+| [Windows Privilege Escalation](26-windows-privesc/) | ✅ | 2026-10-27 |
 | [Documentation & Reporting](27-documentation-reporting/) | ✅ | 2026-10-26 |
 
 ---

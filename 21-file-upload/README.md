@@ -1,9 +1,8 @@
 # File Upload Attacks
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Abuse a file-upload feature to get code execution (upload a web shell) or other impact, by defeating the upload validation.
 

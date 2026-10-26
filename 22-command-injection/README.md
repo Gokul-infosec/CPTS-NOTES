@@ -1,9 +1,8 @@
 # Command Injections
 
-> Status: 🟨 In progress
+> Status: ✅ Complete (reference)
 > Date started: 2026-10-26
-> Date finished: 
-
+> Date finished: 2026-10-27
 ## 1. Goal
 Inject OS commands where an app passes user input into a system call. Find an input that reaches a shell, chain a command with an operator, bypass filters as needed.
 
