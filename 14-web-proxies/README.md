@@ -1,6 +1,6 @@
 # Using Web Proxies
 
-> Status: 🟨 In progress (sections 1–4 of 15 filled)
+> Status: 🟨 In progress (sections 1–8 of 15 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -46,4 +46,29 @@ Both need a JRE (bundled in the installer). Both pre-installed on Pwnbox/Parrot/
 
 **Example (request manipulation):** a ping form sends `POST /ping` with body `ip=1`. Intercept it and change the value to `;ls;` → forward → the response returns the `ls` output instead of ping output = command injected. That's the whole point of the proxy: edit the wire, watch the back-end react.
 
-> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept, edit the raw request, forward → observe the response. Front-end validation is irrelevant once you're editing on the wire. (Sections 5–15 — Repeater, Intruder, Decoder/Comparer, scanner, extensions — to be added.)
+## Intercepting responses
+Catch the server's response *before* the browser renders it — to un-restrict fields, reveal hidden ones, enable disabled buttons.
+- **Burp:** `Proxy > Proxy settings > Response interception rules` → enable **Intercept Response**. Turn request intercept on, `Ctrl+Shift+R` full-refresh, Forward the request → the response appears → edit the HTML (e.g. change `type="number"` → `type="text"`, `maxlength="3"` → `maxlength="100"`) → Forward.
+- **ZAP:** click **Step** on an intercepted request → it auto-intercepts the response → edit → Continue.
+- **ZAP HUD shortcuts** (no intercept needed): **Show/Enable** button (light-bulb, 3rd on left) un-hides + enables fields instantly; **Comments** button (add via `+`) marks positions with HTML comments (hover to read). Burp equivalent: `Proxy > Proxy settings > Response modification rules` → e.g. **Unhide hidden form fields**.
+
+## Automatic modification (match & replace)
+Apply a rule to *every* request/response automatically instead of intercepting each one.
+- **Burp:** `Proxy > Proxy settings > HTTP match and replace rules > Add`.
+  - Spoof User-Agent: Type **Request header**, Match `^User-Agent.*$`, Replace `User-Agent: HackTheBox Agent 1.0`, **Regex = true**.
+  - Persist the field unlock: Type **Response body**, Match `type="number"`, Replace `type="text"`, Regex = false (add another for `maxlength`). Now the injection works on a plain refresh, no intercept.
+- **ZAP Replacer** (`Ctrl+R` or Options → Replacer → Add): Description, Match Type (e.g. Request Header — adds if absent), Match String (`User-Agent`), Replacement String, Enable. **Initiators** tab scopes where it applies (default: all HTTP(S) messages).
+
+## Repeating requests (Repeater)
+Resend any past request with quick edits — no re-intercept. Essential for iterating payloads (e.g. enumerate with different commands).
+- **Proxy history:** Burp `Proxy > HTTP history`; ZAP bottom **History** tab / HUD History pane. Both filter + sort. (Both also keep **WebSockets history**.) Burp can show **Original** vs **Edited Request**; ZAP shows only the sent request.
+- **Burp Repeater:** select a request → `Ctrl+R` sends it to Repeater → `Ctrl+Shift+R` jumps there → **Send**. Right-click → **Change Request Method** to flip POST/GET without rewriting.
+- **ZAP:** right-click → **Open/Resend with Request Editor** → Send (Method drop-down to switch verb). HUD: click a history item → Request Editor → **Replay in Console** or **Replay in Browser**.
+
+## Encoding / decoding
+Request data must be correctly URL-encoded or the server errors. Key chars to encode: **space** (ends data), **`&`** (param delimiter), **`#`** (fragment).
+- **URL-encode in Burp Repeater:** select text → right-click → `Convert Selection > URL > URL-encode key characters`, or **`Ctrl+U`**. Right-click to enable *URL-encode as you type*. ZAP URL-encodes request data automatically in the background. (Also Full URL-encoding / Unicode URL-encoding for heavy special chars.)
+- **Full encoder:** Burp **Decoder** tab (or the **Inspector** in Proxy/Repeater); ZAP **Encoder/Decoder/Hash** (`Ctrl+E`, auto-decodes; "Add New Tab" for custom encoders). Both do **HTML, Unicode, Base64, ASCII hex**.
+- **Cookie-tamper example:** a base64 cookie `eyJ1c2VybmFtZSI6Imd1ZXN0IiwgImlzX2FkbWluIjpmYWxzZX0=` decodes to `{"username":"guest", "is_admin":false}` → change to `admin`/`true` → re-encode base64 → use in Repeater. (Burp: chain encoders by picking a method in the output pane.)
+
+> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept/edit the raw request (or the response to unlock the UI), or set a match-and-replace rule to automate it → send repeated payloads via Repeater/Request Editor → URL-encode request data and decode/encode cookies and params with Decoder / Encoder-Decoder-Hash. Front-end validation is irrelevant once you're editing on the wire. (Sections 9–15 — Comparer, scanner/crawler, Intruder-style fuzzing, extensions — to be added.)
