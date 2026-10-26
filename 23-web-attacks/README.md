@@ -128,6 +128,14 @@ wsdump.pl -o out.txt http://t/service?wsdl
 
 > APIs fail the same ways (IDOR, mass assignment, SSRF, XXE) but with less UI to hide behind — the method (PUT/DELETE) and the auth token are the attack surface. JWT `alg:none` and object-level authz (BOLA/IDOR) are the top two API findings.
 
+## Session security (CSRF, fixation, open redirect)
+- **CSRF** — trick an authenticated victim's browser into submitting an action (the browser auto-sends their cookie). Malicious auto-submitting form / img to a state-changing endpoint. **Fix:** anti-CSRF tokens, SameSite cookies. Chained with XSS, CSRF tokens can be stolen.
+- **Session fixation** — attacker fixes a known session ID, victim logs in with it, attacker reuses it. **Fix:** regenerate session ID on login.
+- **Session hijacking** — steal a valid cookie (XSS, sniffing) and replay it (`curl -b "sessionid=<stolen>"`). **Fix:** `HttpOnly`+`Secure`, HTTPS.
+- **Open redirect** — `?url=https://attacker` sends users to a malicious site (phishing, OAuth token theft). Test: `curl -i "http://t/redirect?url=https://evil"`; fuzz the param. **Fix:** allow-list redirect targets.
+
+> Good session hygiene = random `HttpOnly`/`Secure`/`SameSite` session IDs, regenerated at login, with CSRF tokens on state-changing requests. Open redirects look minor but are gold for phishing and stealing OAuth codes.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 

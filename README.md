@@ -175,7 +175,7 @@ CPTS-NOTES/
 | [Footprinting](04-footprinting/) | 🟨 | |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | ⬜ | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
-| [File Transfers](07-file-transfers/) | ⬜ | |
+| [File Transfers](07-file-transfers/) | 🟨 | |
 | [Shells & Payloads](08-shells-payloads/) | ⬜ | |
 | [Using the Metasploit Framework](09-metasploit/) | ⬜ | |
 | [Password Attacks](10-password-attacks/) | 🟨 | |
@@ -189,7 +189,7 @@ CPTS-NOTES/
 | [SQLMap Essentials](18-sqlmap/) | ⬜ | |
 | [Cross-Site Scripting (XSS)](19-xss/) | 🟨 | |
 | [File Inclusion](20-file-inclusion/) | ⬜ | |
-| [File Upload Attacks](21-file-upload/) | ⬜ | |
+| [File Upload Attacks](21-file-upload/) | 🟨 | |
 | [Command Injections](22-command-injection/) | 🟨 | |
 | [Web Attacks](23-web-attacks/) | 🟨 | |
 | [Attacking Common Applications](24-common-applications/) | 🟨 | |
