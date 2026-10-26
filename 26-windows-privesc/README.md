@@ -223,6 +223,30 @@ secretsdump.py -sam SAM -security SECURITY -system SYSTEM LOCAL
 
 > **AlwaysInstallElevated** is a top quick win: if both HKCU and HKLM keys = 1, any MSI you run installs as SYSTEM. And forced auth (SCF/LNK + Responder) turns a writable share into captured domain hashes without touching an exploit.
 
+## Legacy / EOL systems (module close)
+EOL Windows (XP, 7, Server 2003/2008/2008R2 — all past end-of-life, 2008/R2 since 2020-01-14) get **no security patches** and lack modern protections (Credential Guard, Device Guard, AppLocker, CFG). Orgs keep them for legacy apps, so they turn up and are usually easy wins.
+
+**Enumerate missing patches:**
+```text
+wmic qfe ; systeminfo
+# windows-exploit-suggester (feed it systeminfo output)
+windows-exploit-suggester.py --update
+windows-exploit-suggester.py --database <db>.xls --systeminfo sysinfo.txt
+# Sherlock.ps1: Find-AllVulns   |   metasploit: post/multi/recon/local_exploit_suggester
+```
+
+**Classic exploits by era:**
+| Exploit | CVE/MS | Target |
+|---|---|---|
+| MS08-067 | CVE-2008-4250 | Server service RCE (XP/2003) |
+| EternalBlue | MS17-010 | SMBv1 RCE (7/2008 and up to unpatched 10) |
+| MS16-032 | secondary logon | Win7/2008 local privesc (`Invoke-MS16-032`) |
+| MS10-092 | task scheduler | 2008 local privesc (schelevator) |
+
+**On a real engagement:** confirm with the client **before** exploiting EOL boxes — they're often fragile and run critical legacy apps, so an exploit can crash production. The finding itself (unsupported OS) + remediation (patch/replace, or **network-segment** if they can't) is high-value in the report regardless of whether you pop it.
+
+> EOL systems are the easiest privesc you'll meet — no patches, no modern defenses, public exploits for everything. But they're also the most fragile; the professional move is to flag the risk and get explicit sign-off before firing MS17-010 at a box that might be running the client's billing system.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
