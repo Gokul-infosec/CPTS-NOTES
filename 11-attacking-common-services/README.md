@@ -1,6 +1,6 @@
 # Attacking Common Services
 
-> Status: 🟨 In progress
+> Status: 🟨 In progress (section 1 of 19 audited; attack sections already covered)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -33,6 +33,52 @@ Everything is loot: usernames, emails, passwords, DNS records, IPs, source code,
 - **Tools:** nmap, metasploit, sqlmap, `grep`/`find`, custom scripts
 
 > Through-line of the module: every piece of info is valuable, misconfigs leak info and sometimes give RCE, and automation speeds the hunt. SPPD is the lens for *why* an attack works, not just *that* it does.
+
+## Interacting with services (source notes)
+Before attacking, know how to connect + hunt for sensitive files.
+
+**SMB — Windows:**
+```text
+\\<ip>\Finance\                      (WinKey+R, GUI) — no prompt if anon/authed
+dir \\<ip>\Finance\                  cmd: list a share
+net use n: \\<ip>\Finance            map to drive N:
+net use n: \\<ip>\Finance /user:plaintext Password123   with creds
+dir n: /a-d /s /b | find /c ":\"     count files (/a-d not dirs, /s recurse, /b bare)
+dir n:\*cred* /s /b                  find files by name (cred/password/users/secret/key, *.php/.cs/...)
+findstr /s /i cred n:\*.*            find a string inside files
+```
+```powershell
+Get-ChildItem \\<ip>\Finance\                      # (gci) list
+New-PSDrive -Name N -Root \\<ip>\Finance -PSProvider FileSystem   # map drive
+# with creds:
+$p = ConvertTo-SecureString 'Password123' -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential 'plaintext',$p
+New-PSDrive -Name N -Root \\<ip>\Finance -PSProvider FileSystem -Credential $cred
+(Get-ChildItem -File -Recurse | Measure-Object).Count          # count files
+Get-ChildItem -Recurse -Path N:\ -Include *cred* -File          # find by name
+Get-ChildItem -Recurse -Path N:\ | Select-String "cred" -List   # grep-equivalent
+```
+**SMB — Linux** (needs `sudo apt install cifs-utils`):
+```bash
+sudo mount -t cifs -o username=plaintext,password=Password123,domain=. //<ip>/Finance /mnt/Finance
+mount -t cifs //<ip>/Finance /mnt/Finance -o credentials=/path/credfile   # credfile: username=/password=/domain=
+find /mnt/Finance/ -name *cred*          # find by name
+grep -rn /mnt/Finance/ -ie cred          # find by content
+```
+
+**Email clients:** Evolution (`sudo apt-get install evolution`; `export WEBKIT_FORCE_SANDBOX=0 && evolution` if it errors), Thunderbird, Claws, mutt. Point at the mail server's IP/domain; pick TLS (dedicated port) or STARTTLS to match the server.
+
+**Databases — clients:**
+```bash
+sqsh -S <ip> -U username -P Password123        # MSSQL from Linux
+sqlcmd -S <ip> -U username -P Password123       # MSSQL from Windows
+mysql -u username -pPassword123 -h <ip>         # MySQL (mysql.exe on Windows)
+```
+GUI: **dbeaver** (multi-platform, `sudo dpkg -i dbeaver-<ver>.deb` → `dbeaver &`), MySQL Workbench, SSMS (Windows-only, MSSQL).
+
+**Tools by service:** SMB — smbclient, CrackMapExec, SMBMap, Impacket (psexec.py/smbexec.py). FTP — ftp, lftp, ncftp, filezilla, crossftp. Email — Thunderbird, mutt, mailutils, **sendEmail**, **swaks**, sendmail. DB — mssql-cli, mycli, mssqlclient.py, dbeaver, MySQL Workbench, SSMS.
+
+**No access? Check:** authentication · privileges · network connection · firewall rules · protocol support. Use the error code to find docs/forum fixes.
 
 ## Per-service attacks
 
