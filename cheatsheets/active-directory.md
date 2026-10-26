@@ -92,3 +92,27 @@ psexec.py <CHILD>/hacker@<parent-dc> -k -no-pass -target-ip <parent-dc-ip>
 raiseChild.py -target-exec <parent-dc-ip> <CHILD>/<adm>        # automated
 ```
 Windows golden ticket: `mimikatz # kerberos::golden /user:hacker /domain:<CHILD> /sid:<CHILD_SID> /krbtgt:<hash> /sids:<PARENT_EA_SID> /ptt`
+
+## Tools glossary (what each is for)
+**Enumeration / situational awareness**
+- **PowerView / SharpView** — PS/.NET AD recon, net* replacement, finds quick wins (Kerberoast/ASREP).
+- **BloodHound** + **SharpHound** (C#) / **BloodHound.py** (ingestors) — graph AD relationships → attack paths.
+- **rpcclient / enum4linux(-ng) / ldapsearch / windapsearch / smbmap** — Linux AD/SMB/LDAP enum.
+- **Snaffler** — hunt creds/secrets in file shares. **adidnsdump** — dump DNS records over LDAP.
+- **AD Explorer** (snapshot/compare) · **PingCastle** (risk score) · **Group3r** (GPO audit) · **ADRecon** (full dump to Excel).
+
+**Poisoning / spraying**
+- **Responder** (Linux) / **Inveigh / InveighZero** (Windows) — LLMNR/NBT-NS/MDNS poisoning.
+- **Kerbrute** — Kerberos user enum + spray. **DomainPasswordSpray.ps1** — Windows spray. **CrackMapExec** — enum + spray + exec (SMB/WMI/WinRM/MSSQL).
+- **LAPSToolkit** — audit/attack LAPS.
+
+**Kerberos / creds**
+- **Rubeus** (C# Kerberos abuse) · **GetUserSPNs.py** (Kerberoast) · **GetNPUsers.py** (AS-REP) · **setspn.exe** (SPN enum).
+- **Mimikatz** — PtH, plaintext creds, ticket extraction, DCSync, golden ticket. **Hashcat** — crack.
+- **secretsdump.py** — dump SAM/LSA/NTDS. **ticketer.py** (forge tickets) · **lookupsid.py** (SID brute) · **gettgtpkinit.py / getnthash.py** (cert→TGT→hash).
+
+**Execution / lateral**
+- **psexec.py / wmiexec.py** (Impacket shells) · **evil-winrm** (WinRM shell) · **mssqlclient.py** (MSSQL) · **smbserver.py** (file host).
+
+**Exploits**
+- **noPac.py** (CVE-2021-42278/42287) · **CVE-2021-1675.py** (PrintNightmare) · **PetitPotam.py** (CVE-2021-36942) · **ntlmrelayx.py** (NTLM relay) · **raiseChild.py** (child→parent auto) · **rpcdump.py** (RPC endpoint map).
