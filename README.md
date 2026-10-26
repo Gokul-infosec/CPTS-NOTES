@@ -175,7 +175,7 @@ CPTS-NOTES/
 | [Footprinting](04-footprinting/) | 🟨 | |
 | [Information Gathering - Web Edition](05-web-info-gathering/) | 🟨 | |
 | [Vulnerability Assessment](06-vulnerability-assessment/) | ⬜ | |
-| [File Transfers](07-file-transfers/) | 🟨 | |
+| [File Transfers](07-file-transfers/) | ✅ | 2026-10-26 |
 | [Shells & Payloads](08-shells-payloads/) | 🟨 | |
 | [Using the Metasploit Framework](09-metasploit/) | 🟨 | |
 | [Password Attacks](10-password-attacks/) | 🟨 | |
