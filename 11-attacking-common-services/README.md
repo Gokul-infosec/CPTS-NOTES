@@ -1,8 +1,8 @@
 # Attacking Common Services
 
-> Status: 🟨 In progress (section 1 of 19 audited; attack sections already covered)
+> Status: ✅ Complete (reference; section 19 is the skills lab)
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-27
 
 ## 1. Goal
 Attack the services found in almost every network (FTP, SMB, SQL, RDP, DNS, SMTP). (Service *enumeration* reference lives in `cheatsheets/service-enumeration.md`; this module is the *attacking* side.)
@@ -216,6 +216,7 @@ python3 o365spray.py --spray -U found.txt -p '<pass>' --count 1 --lockout 1 --do
 ```
 EXPN on a distribution list (e.g. "all") leaks every member — bigger win than VRFY. Hydra/direct spray against cloud SMTP/POP3/IMAP is usually blocked → use the cloud-specific tools.
 - **Spoofing** via manual `telnet <HOST> 25` (HELO/MAIL FROM/RCPT TO/DATA) when no SPF/DKIM/DMARC.
-- **CVE-2020-7247 (OpenSMTPD)** unauth RCE; **CVE-2021-27211 (Exim)**. OSINT: theHarvester, Shodan, Censys, Amass.
+- **CVE-2020-7247 (OpenSMTPD ≤ 6.6.2)** — unauth RCE: a `;` in the **MAIL FROM** sender address escapes into a shell command (64-char limit), service runs as root (binds port 25) → root RCE. **CVE-2021-27211 (Exim)**. OSINT for users: theHarvester, Shodan, Censys, Amass.
+- Practice boxes (ippsec.rocks): Rabbit (OWA brute + macro phish), SneakyMailer (phish + IMAP inbox enum), Reel (SMTP brute + RTF phish).
 
 > Across all six: enumerate → check anon/null/default access → spray (not brute) → abuse the service's own features (xp_cmdshell, OUTFILE, zone transfer, open relay) → capture/relay hashes. SPPD explains each.
