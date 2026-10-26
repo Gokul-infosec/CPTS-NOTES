@@ -1,6 +1,6 @@
 # Documentation & Reporting
 
-> Status: 🟨 In progress (sections 1–2 of 8 filled)
+> Status: 🟨 In progress (sections 1–4 of 8 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -58,7 +58,37 @@ mkdir -p ACME-IPT/{Admin,Deliverables,Evidence/{Findings,Scans/{Vuln,Service,Web
 - **Admin** (SoW, kickoff notes, status reports) · **Deliverables** (report, spreadsheets, decks) · **Evidence** (Findings — one folder each; Scans — Vuln/Service/Web/AD exports; Notes; OSINT; Wireless; Logging output; Misc Files — payloads/webshells/scripts) · **Retest** (optional, mirror the structure).
 - Obsidian can sit on top of this same folder tree — notes and evidence folders in one place. A script that makes the dirs + the ~10 numbered Notes `.md` files is a good engagement-start reflex.
 
-> Workflow so far: set up Tmux logging + the folder/vault structure *before* testing → take structured notes as you go (attack path, creds, per-finding folders) → capture terminal evidence (text > screenshots), redact with solid bars → log every payload/system change with hashes and timestamps → keep raw scan output as the fallback. Report-writing itself (types of reports, exec summary, findings write-ups) is sections 3–8 — to be added.
+## Assessment types (shapes the report)
+- **Vulnerability Assessment** — automated scan, no exploitation; often validate results to flag false positives. Report themes it by severity/count and maps patterns to process gaps.
+- **Penetration Test** — goes beyond scanning. Perspectives: **black box** (just a name/connection), **grey box** (in-scope IPs), **white box** (creds/source/config). Evasion: none → hybrid (start quiet, get noisier to test detection) → fully evasive (adversary simulation, long-term).
+- **Internal vs External** — external = anonymous internet attacker on public assets; internal = from inside the network (anon or authenticated), aiming for foothold → horizontal/vertical privesc → lateral movement → domain compromise.
+- **Inter-disciplinary** — purple team (red + IR/blue), cloud-focused, IoT (network/cloud/app/hardware), web app, hardware/physical. Standard report layout still fits most.
+
+## Report types / deliverables
+- **Draft → Final** — submit a draft, let the client comment (management responses, language tweaks), then issue final. Many auditors won't accept a draft for compliance.
+- **Post-Remediation (retest)** — retest **only the original findings on the original hosts**, with a time limit. Don't re-scan the whole environment (scope creep). Note time elapsed + that it's a point-in-time recheck. If auditor-time pressure appears, suggest a documented remediation plan with a deadline rather than bending severities.
+- **Attestation Report/Letter** — 1–2 pages for the client's vendors/customers: number of findings, approach, general comments — **no technical detail or secrets**.
+- **Slide deck** — pitch to the audience's level (technical vs exec); anecdotes beat walls of graphs.
+- **Spreadsheet of findings** — tabular findings (no exec summary/narrative) for sorting + ticketing import.
+- **Vulnerability Notification** — stop-work alert for a critical (internet-facing unauth RCE, sensitive data exposure, default creds). Keep it lean: technical detail + reproducible evidence. Set the threshold at kickoff.
+
+## Report components
+**Prioritise** — disclose everything, but don't burn time validating 35 SSL/TLS variations; consolidate low/info issues into categories and focus effort on high-impact (RCE, sensitive data).
+
+**Attack chain** — the narrative of how findings combined to go from foothold → domain compromise; shows *why* a medium becomes a high when chained. Format = summary bullets first, then step-by-step with command output + screenshots (reuse as per-finding evidence). The module's sample chain is a classic internal: Responder → crack NTLMv2 → BloodHound → Kerberoast → crack TGS → LSA secrets (CrackMapExec `--lsa`) → Pass-the-Ticket (Rubeus) → DCSync (mimikatz) → NTDS dump (secretsdump). *(Those actual attack commands live in [module 13 — Active Directory](../13-active-directory/); here the point is how to present them: preserve real command+output, `<SNIP>` noise, `<REDACTED>` creds/hashes, highlight the command run and the key output line.)*
+
+**Executive Summary** (the most important page or two) — written for a **non-technical budget-holder**:
+- *Do:* give specific numbers ("25 occurrences", not "several"); keep it to ~1.5–2 pages; describe *what you accessed* in business terms (HR docs, banking systems — not "Domain Admin"); describe the **process** that broke down (not "install 3 patches"); optionally set rough remediation effort (low/moderate/significant).
+- *Don't:* name vendors (EDR fine, "CrowdStrike" no); use acronyms (SNMP, MitM); over-explain trivia; use obscure words; reference technical sections.
+- **Translate** for the glossary: VPN/SSH → "a protocol for secure remote administration"; hash → "output of an algorithm used to validate file integrity"; password spraying → "trying one easy password against many accounts"; SQLi/XSS → "input accepted without sanitising characters meant to manipulate the app". Avoid absolutes ("testing seemed to go unnoticed", not "they can't detect anything").
+
+**Summary of Recommendations** — short/medium/long-term, each tied to a finding; long-term maps to process fixes (patch program, SDLC, security templates). Stops the "which high is the most high?" question.
+
+**Findings** — the technical write-ups (covered in sections 5–8, to be added).
+
+**Appendices** — *static:* Scope, Methodology, Severity Ratings (map to CVSS or defend your own), Biographies (esp. PCI). *dynamic:* Exploitation Attempts/Payloads (so IR can tell you from a real attacker), Compromised Credentials, Configuration Changes (so they can revert), Additional Affected Scope, Information Gathering (external OSINT), **Domain Password Analysis** (DPAT stats from a cracked NTDS dump).
+
+> Workflow so far: set up Tmux logging + the folder/vault structure *before* testing → take structured notes as you go (attack path, creds, per-finding folders) → capture terminal evidence (text > screenshots), redact with solid bars → log every payload/system change with hashes and timestamps. Then: pick the report type → write the attack chain from your notes → distil it into a non-technical **executive summary** → tie **recommendations** to findings → write up each **finding** (sections 5–8, still to add) → attach appendices.
 
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)
