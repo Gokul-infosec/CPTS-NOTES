@@ -180,7 +180,7 @@ CPTS-NOTES/
 | [Using the Metasploit Framework](09-metasploit/) | 🟨 | |
 | [Password Attacks](10-password-attacks/) | 🟨 | |
 | [Attacking Common Services](11-attacking-common-services/) | 🟨 | |
-| [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | ⬜ | |
+| [Pivoting, Tunneling, and Port Forwarding](12-pivoting-tunneling/) | 🟨 | |
 | [Active Directory Enumeration & Attacks](13-active-directory/) | 🟨 | |
 | [Using Web Proxies](14-web-proxies/) | ⬜ | |
 | [Attacking Web Applications with Ffuf](15-ffuf/) | ⬜ | |
