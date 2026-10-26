@@ -63,6 +63,27 @@ secretsdump.py <domain>/<admin>:<pass>@<DC>
 
 > BloodHound is the force multiplier — it shows the *shortest path* to DA so you're not guessing. Kerberoasting + AS-REP roasting are the highest-value early wins because any domain user can attempt them. krbtgt hash = keys to the kingdom (Golden Ticket).
 
+## AD attack catalog (by phase — study/coverage index)
+The full menu. Commands for the core ones are in the attack-flow above; this is the map so I know what exists and when it applies. **CPTS focus = the post-access AD attacks** (credential dumping → privesc → lateral → persistence). Initial-access social/physical and Azure/cloud items are mostly red-team / cloud scope — know the names, but they're outside core CPTS.
+
+**1. Initial access** (mostly red-team scope): phishing, malicious macros, credential stuffing, pass-the-cookie, malicious USB/Rubber Ducky, exposed SMB shares, VPN cred hijack, zero-day (e.g. Log4Shell), **LLMNR/NBT-NS poisoning** (Responder — this one *is* core), evil twin, watering hole, supply chain.
+
+**2. Credential dumping:** Mimikatz (LSASS), **DCSync**, LSASS dump, SAM/SYSTEM hive, Kerberos ticket extraction, **NTDS.dit** dump, WDigest, cached creds (mscache), browser creds, DPAPI.
+
+**3. Privilege escalation:** **Kerberoasting**, **AS-REP roasting**, token impersonation, Pass-the-Hash, **Print Spooler / PrintNightmare**, unconstrained/constrained delegation abuse, local privesc (CVEs → modules 25/26), SeBackup/SeRestorePrivilege, S4U2Self/S4U2Proxy, DNSAdmins DLL load, **AD CS abuse (ESC1-8)**.
+
+**4. Lateral movement:** PtH, Pass-the-Ticket, SMB relay, PsExec, RDP hijack, WMI, BloodHound (path-finding), DCOM, WinRM, Printer Bug, **PetitPotam**, domain/forest trust abuse.
+
+**5. Persistence / domain takeover:** **Golden Ticket** (krbtgt), **Silver Ticket** (service), Skeleton Key, AdminSDHolder, GPO hijack, SID history injection, **Shadow Credentials**, **RBCD**, DCShadow, WMI event sub, registry run keys, AD Recycle Bin, ADFS token forgery, Azure AD Connect.
+
+**6. NTLM & Kerberos protocol attacks:** NTLM relay, NTLMv1 downgrade, Kerberos downgrade, **Overpass-the-Hash**, pre-auth brute force, PAC tampering, TGT delegation, **Bronze Bit (CVE-2020-17049)**, LDAP relay.
+
+**7. Data exfil / domain persistence:** ldapdomaindump, **GPP cpassword** (Groups.xml in SYSVOL), LSA secrets, SYSVOL creds, MSSQL (AD-integrated) privesc, VSS shadow copy, cloud sync, ADFS cert theft, Azure AD.
+
+**8. Misc:** PowerView recon, AD object/ACL permission abuse, unconstrained delegation TGT capture.
+
+> Bolded = the ones that actually come up most in CPTS/internal pentests. If I learn this column cold — LLMNR poisoning, Kerberoasting, AS-REP, DCSync, PtH, Golden/Silver ticket, delegation, AD CS, GPP cpassword — I've got the exam's AD surface covered.
+
 ## My notes / lab output
 Filled in as I run these on lab targets.
 
