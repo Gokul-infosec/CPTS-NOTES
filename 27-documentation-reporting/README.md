@@ -1,8 +1,8 @@
 # Documentation & Reporting
 
-> Status: 🟨 In progress (sections 1–4 of 8 filled)
+> Status: ✅ Complete (reference; sections 7–8 are the hands-on lab to do myself)
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 The report is the deliverable — the client pays for it, not for the pwn. Take thorough, organised notes and keep raw evidence as you test, so writing the report is assembly, not archaeology. Good documentation also covers you: when a client blames the test for an outage, timestamped logs + a confirmed scope file are what prove what you actually did.
@@ -88,7 +88,43 @@ mkdir -p ACME-IPT/{Admin,Deliverables,Evidence/{Findings,Scans/{Vuln,Service,Web
 
 **Appendices** — *static:* Scope, Methodology, Severity Ratings (map to CVSS or defend your own), Biographies (esp. PCI). *dynamic:* Exploitation Attempts/Payloads (so IR can tell you from a real attacker), Compromised Credentials, Configuration Changes (so they can revert), Additional Affected Scope, Information Gathering (external OSINT), **Domain Password Analysis** (DPAT stats from a cracked NTDS dump).
 
-> Workflow so far: set up Tmux logging + the folder/vault structure *before* testing → take structured notes as you go (attack path, creds, per-finding folders) → capture terminal evidence (text > screenshots), redact with solid bars → log every payload/system change with hashes and timestamps. Then: pick the report type → write the attack chain from your notes → distil it into a non-technical **executive summary** → tie **recommendations** to findings → write up each **finding** (sections 5–8, still to add) → attach appendices.
+## How to write up a finding
+Each finding needs, at minimum: **Description** (+ affected platform) · **Impact** if unresolved · **Affected systems** · **Recommendation** · **Reference links** · **Steps to reproduce + evidence**. Optional: CVE, OWASP/MITRE IDs, CVSS (fill it if your template has the field), ease/probability of exploitation. Tweak "stock" findings to the client's actual environment — "Default Credentials" on a DeskJet ≠ on the building HVAC or a key web app.
+
+**Reproduction steps:**
+- One step = one figure; don't cram multiple actions into one screenshot.
+- If setup is needed (e.g. an MSF module), show the config in one figure and the result in a second.
+- Write narrative *between* figures, not just captions.
+- Prefer copy-pasteable text over screenshots (a Burp screenshot of a payload is useless if they can't copy it).
+- Make evidence **defensible**: to prove cleartext creds, show the Wireshark capture of the human-readable auth — not just the login popup. For GUI/RDP/web, capture the URL bar or `ipconfig`/`ifconfig` to prove it's *their* host. Turn off your bookmarks bar and unprofessional extensions.
+
+**Remediation recommendations** — be specific and actionable, give options:
+- *Bad:* "Reconfigure the registry to harden against X." *Good:* list the full hive paths + value changes, and warn to test critical changes (like registry edits) on a small group first.
+- *Bad:* "Buy [expensive tool]." *Good:* link the vendor's free workaround as interim, mention commercial tools exist but may be cost-prohibitive. Don't trap a client with no budget.
+
+**References** — vendor-agnostic, thorough, no paywall, gets to the point, clean site (no ad/crypto-miner junk), unlikely to disappear (prefer reputable orgs over a personal blog). Writing your own blog source is a bonus.
+
+**Findings DB** — maintain sanitised, reusable findings so you're not rewriting the same content (and risking inconsistency across a team). Tools: free — **WriteHat**, Ghostwriter, Dradis, VECTR; paid — PlexTrac, AttackForge, Rootshell Prism.
+
+## Reporting tips & tricks
+- **Write as you go** — fill templated parts (client, scope, contacts) during long scans; write the attack chain + findings with evidence *during* testing so nothing's recaptured at the end.
+- **Templates** — one blank template per assessment type; never edit a previous client's report (you'll leave their name in — looks amateur).
+- **MS Word** (Windows, not Mac — Mac Word breaks PDF margins/ToC links, no VB editor): use **font styles + table styles** (update once → changes everywhere, no direct formatting); built-in **captions** (auto-renumber); page numbers; ToC + List of Figures/Tables; a code/terminal style with **spell-check disabled** via language settings; custom dictionary for repeat typos ("pubic"→"public"). Hotkeys: `F4` repeat last action, `Ctrl+A`+`F9` update all fields/ToC, `Ctrl+Alt+S` split view, `Shift+F5` jump to last edit. Automate with `.dotm` macros (pop-up to inject client/dates/scope; strip bookmarked sections per assessment type).
+- **Redaction/cleanup** — Greenshot with **solid shapes, never blur**; redact creds/hashes/secrets; remove unprofessional tool output (CME's `(Pwn3d!)` — change it in the config), check Hashcat output for crude cracked passwords (OK to swap these — the rare exceptions to "never alter output"); keep hostname/username professional (no `azzkicker@clientsmasher`); solid-black console theme (or light for printing).
+- **Tell a story, show enough evidence (not 50 pages of console), stay organised, spell-check** (Grammarly/LanguageTool — but they may ship data to the cloud; get approval).
+
+## Client communication
+- **Start notification** (each engagement): tester name, type/scope, source IP(s), dates, primary/secondary contacts.
+- **Daily stop notification**: signals testing ended for the day; good place for a high-level heads-up if there'll be 20+ highs. Start/stop times also let the client correlate alerts.
+- **Open dialogue**: found a new subnet/subdomain? ask before adding to scope. Found external unauth RCE/SQLi? **stop and notify**. Got DA/EA? give a heads-up, keep testing, ask what else to focus on. Host went down? be upfront.
+
+## QA & delivery
+- The report is the highlight reel — "if you can't get it on paper so someone else understands, it may as well never have happened."
+- **At least one QA reviewer who isn't the author** (ideally two passes: technical accuracy, then style). Solo? sleep on it and re-read. Keep a QA checklist in the template (remove before final). QA fixes only minor stuff; the author fixes missing evidence/findings/exec-summary.
+- Turn on **Track Changes** to learn from QA edits.
+- **Draft → review meeting (~a week later, findings one by one) → Final** (often identical bar the label; some auditors only accept "Final"). Archive testing data per retention policy until retest.
+
+> Full workflow: set up logging + folder/vault structure **before** testing → take structured notes + capture defensible evidence as you go → write templated report parts during scans → build the attack chain → distil a non-technical **executive summary** → tie **recommendations** to findings → write each **finding** (description/impact/affected/recommendation/references/repro+evidence, specific & actionable) → attach appendices → self-QA → independent QA with Track Changes → issue **Draft** → review meeting → issue **Final** → archive. Write as you go, redact with solid shapes, tell a story.
 
 ## 2. Setup
 - Attack box: (Pwnbox / Kali VM)

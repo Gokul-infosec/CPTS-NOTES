@@ -195,7 +195,7 @@ CPTS-NOTES/
 | [Attacking Common Applications](24-common-applications/) | 🟨 | |
 | [Linux Privilege Escalation](25-linux-privesc/) | 🟨 | |
 | [Windows Privilege Escalation](26-windows-privesc/) | 🟨 | |
-| [Documentation & Reporting](27-documentation-reporting/) | 🟨 | |
+| [Documentation & Reporting](27-documentation-reporting/) | ✅ | 2026-10-26 |
 | [Attacking Enterprise Networks](28-attacking-enterprise-networks/) | ⬜ | |
 
 ---
