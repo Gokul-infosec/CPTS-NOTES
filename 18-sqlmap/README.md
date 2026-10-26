@@ -17,7 +17,9 @@ sqlmap -u "http://t/?id=1" --cookie='PHPSESSID=...'   # inject/auth via cookie
 sqlmap -u t --data='id=1' --method PUT            # other HTTP methods
 sqlmap -u "http://t/?id=1" -p id                  # test ONLY this parameter
 ```
-`-r req.txt` is the go-to: capture the request in Burp, save it, point SQLMap at the file so cookies, CSRF tokens and JSON bodies all come along. Mark the point with `*` inside the file.
+`-r req.txt` is the go-to: capture the request in Burp, save it, point SQLMap at the file so cookies, CSRF tokens and JSON bodies all come along. Mark the point with `*` inside the file. Quick alternative: browser DevTools → Network → **Copy as cURL**, paste into the terminal, and change `curl` to `sqlmap` — all headers/cookies carry over.
+
+SQLMap detects & exploits every SQLi type (**BEUSTQ**): **B**oolean-blind, **E**rror-based, **U**NION, **S**tacked, **T**ime-blind, in**Q**line — plus out-of-band via DNS exfiltration. It has the widest DBMS support of any SQLi tool (MySQL, MSSQL, Oracle, PostgreSQL, SQLite, DB2, MariaDB, and dozens more). The manual meaning of each type is in **module 17**. Install: `apt install sqlmap`, or `git clone` the repo and run `python sqlmap.py`.
 
 ## Detection & tuning
 ```bash
