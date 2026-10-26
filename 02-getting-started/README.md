@@ -1,8 +1,8 @@
 # Getting Started
 
-> Status: 🟨 In progress
+> Status: ✅ Complete
 > Date started: 2026-10-26
-> Date finished: 
+> Date finished: 2026-10-26
 
 ## 1. Goal
 From zero to first box: set up an attack distro, learn the common tech and essential tools, run the basic pentest steps, root a first HTB box, and learn how to get help properly.
@@ -216,6 +216,46 @@ Goal of the section: identify the OS and running services, then look for misconf
 > Commands above are from the module. They move to `cheatsheets/` once I've actually run them in the lab.
 
 **My takeaway:** default Nmap misses a lot (top 1000 only). Always confirm with a `-p-` pass, then `-sV -sC` on the open ports.
+
+### Finding & using public exploits
+Once I have a service + version, look for known exploits:
+```bash
+searchsploit openssh 7.2          # local Exploit-DB search
+```
+Metasploit basic workflow:
+```bash
+msfconsole
+search eternalblue                # find a module
+use exploit/windows/smb/ms17_010_psexec
+show options                      # see required settings
+set RHOSTS <target>
+check                             # test if vulnerable (not all modules support it)
+exploit
+```
+
+### Web enumeration (foundational)
+```bash
+gobuster dir -u http://<target>/ -w /usr/share/dirb/wordlists/common.txt   # dirs (deeper: module 15 ffuf)
+gobuster dns -d <domain> -w /usr/share/SecLists/Discovery/DNS/namelist.txt # subdomains
+whatweb <target>                  # server/CMS/cert fingerprint
+curl -IL http://<target>          # headers / redirects
+curl http://<target>/robots.txt   # disallowed paths often point at interesting dirs
+```
+
+### Shell handling — TTY upgrade
+Getting a shell is covered in depth in **module 08 (Shells & Payloads)** (reverse/bind/webshell payloads live there). The one thing worth repeating everywhere is stabilising a raw shell into a usable TTY:
+```bash
+python3 -c 'import pty; pty.spawn("/bin/bash")'   # step 1: get a pty
+# step 2: Ctrl+Z  ->  stty raw -echo; fg  ->  Enter twice   (now arrows/tab/Ctrl-C work)
+```
+
+### First privesc moves
+Full coverage in **module 25 (Linux privesc)** / **26 (Windows privesc)**. The reflex first checks on Linux:
+```bash
+sudo -l            # what can I run as root/another user?
+./linpeas.sh       # automated enum (transfer it over first — module 07)
+```
+If I can write a user's `~/.ssh/authorized_keys`, I can drop my own public key and SSH in as them — stable access without a shaky reverse shell.
 
 ## 2. Setup
 - Attack box: HTB Pwnbox (Parrot), unlimited time
