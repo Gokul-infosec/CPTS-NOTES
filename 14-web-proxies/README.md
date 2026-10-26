@@ -1,6 +1,6 @@
 # Using Web Proxies
 
-> Status: 🟨 In progress (sections 1–8 of 15 filled)
+> Status: 🟨 In progress (sections 1–10 of 15 filled)
 > Date started: 2026-10-26
 > Date finished: 
 
@@ -71,4 +71,33 @@ Request data must be correctly URL-encoded or the server errors. Key chars to en
 - **Full encoder:** Burp **Decoder** tab (or the **Inspector** in Proxy/Repeater); ZAP **Encoder/Decoder/Hash** (`Ctrl+E`, auto-decodes; "Add New Tab" for custom encoders). Both do **HTML, Unicode, Base64, ASCII hex**.
 - **Cookie-tamper example:** a base64 cookie `eyJ1c2VybmFtZSI6Imd1ZXN0IiwgImlzX2FkbWluIjpmYWxzZX0=` decodes to `{"username":"guest", "is_admin":false}` → change to `admin`/`true` → re-encode base64 → use in Repeater. (Burp: chain encoders by picking a method in the output pane.)
 
-> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept/edit the raw request (or the response to unlock the UI), or set a match-and-replace rule to automate it → send repeated payloads via Repeater/Request Editor → URL-encode request data and decode/encode cookies and params with Decoder / Encoder-Decoder-Hash. Front-end validation is irrelevant once you're editing on the wire. (Sections 9–15 — Comparer, scanner/crawler, Intruder-style fuzzing, extensions — to be added.)
+## Proxying other tools (CLI & thick clients)
+Point any tool at `http://127.0.0.1:8080` to see its web requests in Burp/ZAP. (Proxying slows tools down — only do it when debugging their traffic.)
+- **proxychains** — routes any CLI tool through the proxy. Edit `/etc/proxychains.conf`: comment the final `socks4` line, add `http 127.0.0.1 8080`. Use `-q` (quiet):
+  ```bash
+  proxychains -q curl http://SERVER_IP:PORT
+  ```
+- **Metasploit** — set the proxy per module with `set PROXIES`:
+  ```bash
+  msfconsole
+  use auxiliary/scanner/http/robots_txt
+  set PROXIES HTTP:127.0.0.1:8080
+  set RHOST SERVER_IP ; set RPORT PORT ; run
+  ```
+  Then check the proxy's HTTP history. Same works for scripts/thick clients — set each tool's proxy.
+
+## Burp Intruder (web fuzzer / brute-forcer)
+Fuzz pages, dirs, subdomains, parameters, values; alternative to ffuf/gobuster/wfuzz. **Community is throttled to ~1 req/sec** (use it only for short runs); Pro is unthrottled.
+1. **Send to Intruder** — in Proxy history, right-click the request → *Send to Intruder* (`Ctrl+I`); open with `Ctrl+Shift+I`. Target is pre-filled.
+2. **Positions** — mark the payload point with `§` (select the word, click **Add §**). For dir fuzzing: `GET /§DIRECTORY§/`. Attack types: **Sniper** (1 position), **Cluster Bomb** (multiple positions, all combos), etc. Leave the two blank lines at the request's end.
+3. **Payloads:**
+   - *Payload type* — **Simple list** (iterate a wordlist), **Runtime file** (stream a huge list line-by-line to save memory), **Character substitution** (permutations), and more.
+   - *Configuration* — **Load** a wordlist (e.g. `/opt/useful/seclists/Discovery/Web-Content/common.txt`), or **Add** items manually; combine lists.
+   - *Processing* — rules over the wordlist, e.g. **Skip if matches regex** `^\..*$` to skip lines starting with `.`; or append an extension.
+   - *Encoding* — toggle payload URL-encoding (leave on).
+4. **Settings** — retries/pause = 0; **Grep - Match** to flag responses: enable, Clear, add `200 OK`, uncheck *Exclude HTTP headers* (the status is in the header). **Grep - Extract** pulls a specific part of long responses. **Resource Pool** caps network use for big attacks.
+5. **Start Attack** → sort by the `200 OK` column / Status / Length to find hits (e.g. `/admin/` = 200). Verify manually.
+
+Beyond dirs: password brute-force, parameter fuzzing, and **password spraying** against AD-backed apps (OWA, SSL VPN portals, RDS, Citrix, custom AD-auth web apps). Throttling makes Community impractical for large runs — ZAP's fuzzer (next) has no paid tier.
+
+> Workflow: start the proxy → open the pre-configured browser (or point Firefox via FoxyProxy + import the CA cert) → browse the target so requests populate the proxy → intercept/edit the raw request (or the response to unlock the UI), or set a match-and-replace rule to automate it → send repeated payloads via Repeater/Request Editor → URL-encode request data and decode/encode cookies and params with Decoder / Encoder-Decoder-Hash → fuzz/brute-force with Intruder (or proxy CLI tools through to inspect their traffic). Front-end validation is irrelevant once you're editing on the wire. (Sections 11–15 — ZAP fuzzer, scanner/crawler, Comparer, extensions, config — to be added.)
